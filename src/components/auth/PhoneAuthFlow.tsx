@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ConfirmationResult } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,6 @@ const REQUIRED_ENV_VARS = [
 export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps) {
   const { sendPhoneOtp, verifyPhoneOtp, completeRegistration, clearPhoneRecaptcha } =
     useAuth();
-  const sendOtpButtonRef = useRef<HTMLButtonElement>(null);
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -74,14 +73,9 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
       toast.error("Enter a valid 10-digit Indian mobile number");
       return;
     }
-    const button = sendOtpButtonRef.current;
-    if (!button) {
-      toast.error("Send OTP button not ready. Try again.");
-      return;
-    }
     setLoading(true);
     try {
-      const result = await sendPhoneOtp(phoneDigits, button);
+      const result = await sendPhoneOtp(phoneDigits);
       setConfirmation(result);
       setStep("otp");
       toast.success("OTP sent to your phone");
@@ -321,7 +315,7 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
             inputMode="numeric"
             value={phone}
             onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-            placeholder="9876543210"
+            placeholder="8770206120"
             required
             minLength={10}
             maxLength={10}
@@ -333,8 +327,12 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
           <p className="mt-1 text-xs text-red-500">Enter a valid 10-digit mobile number</p>
         )}
       </div>
+      <div className="rounded-sm border border-noire-border bg-noire-paper/80 p-3 text-sm text-noire-muted">
+        <p className="font-medium">Test phone credentials</p>
+        <p className="mt-2">Phone: <span className="font-medium">8770206120</span></p>
+        <p>OTP: <span className="font-medium">123456</span></p>
+      </div>
       <Button
-        ref={sendOtpButtonRef}
         type="submit"
         className="w-full"
         loading={loading}

@@ -40,7 +40,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   logout: () => Promise<void>;
-  sendPhoneOtp: (phone: string, recaptchaTarget: HTMLElement) => Promise<ConfirmationResult>;
+  sendPhoneOtp: (phone: string) => Promise<ConfirmationResult>;
   clearPhoneRecaptcha: () => void;
   verifyPhoneOtp: (confirmation: ConfirmationResult, code: string) => Promise<void>;
   completeRegistration: (name: string, address: RegistrationAddress) => Promise<void>;
@@ -72,6 +72,23 @@ function clearRecaptchaVerifier(): void {
     }
     recaptchaVerifier = null;
   }
+}
+
+function getPhoneRecaptchaElement(): HTMLElement {
+  const id = "firebase-phone-recaptcha";
+  let element = document.getElementById(id);
+  if (!element) {
+    element = document.createElement("div");
+    element.id = id;
+    element.style.position = "absolute";
+    element.style.left = "-9999px";
+    element.style.width = "1px";
+    element.style.height = "1px";
+    element.style.overflow = "hidden";
+    element.setAttribute("aria-hidden", "true");
+    document.body.appendChild(element);
+  }
+  return element;
 }
 
 function formatIndianPhone(phone: string): string {
@@ -212,7 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearRecaptchaVerifier();
   }, []);
 
-  const sendPhoneOtp = async (phone: string, recaptchaTarget: HTMLElement) => {
+  const sendPhoneOtp = async (phone: string) => {
     const auth = getAuth();
     if (!auth) {
       throw new Error(
@@ -220,13 +237,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    if (!recaptchaTarget.isConnected) {
-      throw new Error(
-        "reCAPTCHA target not ready. Wait for the page to finish loading and try again."
-      );
-    }
-
     clearRecaptchaVerifier();
+    const recaptchaTarget = getPhoneRecaptchaElement();
 
     recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaTarget, {
       size: "invisible",
@@ -255,7 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         message.includes("already been rendered")
       ) {
         throw new Error(
-          "reCAPTCHA failed. Add localhost and 127.0.0.1 under Firebase Console → Authentication → Settings → Authorized domains, or use test phone +91 9876543210 / OTP 123456."
+          "reCAPTCHA failed. Add localhost and 127.0.0.1 under Firebase Console → Authentication → Settings → Authorized domains, or use test phone 8770206120 / OTP 123456."
         );
       }
       if (message.includes("auth/too-many-requests")) {
