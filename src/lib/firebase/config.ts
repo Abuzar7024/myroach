@@ -1,3 +1,4 @@
+import { initFirebaseAppCheck, setFirebaseAppCheckDebugToken } from "./app-check";
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import {
   getAuth as getFirebaseAuth,
@@ -38,7 +39,11 @@ function createFirebaseApp(): FirebaseApp {
   if (getApps().length > 0) {
     return getApp();
   }
-  return initializeApp(firebaseConfig);
+
+  setFirebaseAppCheckDebugToken();
+  const app = initializeApp(firebaseConfig);
+  initFirebaseAppCheck(app);
+  return app;
 }
 
 let firebaseApp: FirebaseApp | undefined;

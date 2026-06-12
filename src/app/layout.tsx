@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Orbitron, Rajdhani } from "next/font/google";
 import { SiteShell } from "@/components/layout/site-shell";
 import { Providers } from "@/components/providers";
@@ -44,8 +45,18 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const appCheckDebugToken =
+    process.env.NODE_ENV === "development"
+      ? process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN
+      : undefined;
+
   return (
     <html lang="en" className={`${orbitron.variable} ${rajdhani.variable} h-full`}>
+      {appCheckDebugToken ? (
+        <Script id="firebase-app-check-debug-token" strategy="beforeInteractive">
+          {`self.FIREBASE_APPCHECK_DEBUG_TOKEN=${JSON.stringify(appCheckDebugToken)};`}
+        </Script>
+      ) : null}
       <body className="min-h-full flex flex-col antialiased cyber-grid text-foreground bg-background">
         <Providers>
           <SiteShell>{children}</SiteShell>

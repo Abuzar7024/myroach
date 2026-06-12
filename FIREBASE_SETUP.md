@@ -21,6 +21,8 @@ Copy this checklist and fill in values from **Firebase Console → Project setti
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Yes | Project settings |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | Yes | Project settings |
 | `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` | Optional | Analytics only |
+| `NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN` | Optional (dev) | App Check **debug token** — see [App Check debug token](#app-check-debug-token-dev) |
+| `NEXT_PUBLIC_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY` | Optional | reCAPTCHA v3 site key from **App Check** registration (needed to initialize App Check) |
 
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=...
@@ -30,6 +32,8 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
 NEXT_PUBLIC_FIREBASE_APP_ID=...
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=...
+NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN=...  # dev only — NOT the phone OTP test code
+NEXT_PUBLIC_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY=...  # from App Check → Register app → reCAPTCHA v3
 ```
 
 Restart the dev server after changing env vars.
@@ -172,9 +176,37 @@ For production hardening against abuse:
 
 1. **Build → App Check** in Firebase Console
 2. Register your web app with reCAPTCHA Enterprise or reCAPTCHA v3
-3. Enforce App Check on Authentication when ready
+3. Copy the **reCAPTCHA v3 site key** into `.env.local` as `NEXT_PUBLIC_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY`
+4. Enforce App Check on Authentication / Firestore when ready
 
-Not required for initial development.
+Not required for initial development. Phone OTP test numbers work without App Check.
+
+### App Check debug token (dev)
+
+**Do not confuse this with phone OTP testing.** They are configured in different places and serve different purposes:
+
+| | App Check debug token | Phone test number |
+|---|----------------------|-------------------|
+| **Purpose** | Lets **localhost/dev** pass App Check when enforcement is on | Lets you sign in **without SMS** during dev |
+| **Where to configure** | `.env.local` + **App Check → Manage debug tokens** | **Authentication → Phone → Phone numbers for testing** |
+| **Example value** | Long string from App Check (e.g. `AdpetEau3Qad...`) | Phone `+91 9876543210`, OTP `123456` |
+| **Used for** | Firestore, Auth, etc. when App Check is enforced | Phone sign-in OTP only |
+
+When App Check is enabled on your project:
+
+1. **Build → App Check → Manage debug tokens** — click **Add debug token** and paste the token from your browser console *or* the value in `.env.local` (they must match).
+2. Put the token in `.env.local` (never commit):
+
+   ```env
+   NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN=your_debug_token_here
+   NEXT_PUBLIC_FIREBASE_APP_CHECK_RECAPTCHA_SITE_KEY=your_recaptcha_v3_site_key_here
+   ```
+
+3. Restart the dev server. The app sets `self.FIREBASE_APPCHECK_DEBUG_TOKEN` **before any Firebase SDK import** via an early layout script, and again in `src/lib/firebase/app-check.ts` before `initializeApp` / `initializeAppCheck`.
+
+4. **Register the exact token** in Firebase Console → **App Check → Manage debug tokens**. Unregistered tokens are rejected even if the env var is set.
+
+Phone login without App Check enforcement still works with Console test numbers only (`+91 9876543210` / OTP `123456`); the App Check debug token does **not** replace phone OTP codes.
 
 ---
 
@@ -283,6 +315,7 @@ Complete these in [Firebase Console](https://console.firebase.google.com/project
 | `firebase.json` | Firebase CLI config |
 | `.firebaserc` | Default project ID |
 | `scripts/seed-firestore.ts` | Seed script |
+| `src/lib/firebase/app-check.ts` | App Check debug token + optional reCAPTCHA v3 init |
 | `src/lib/firebase/` | Client SDK + graceful mock fallback |
 | `src/components/auth/PhoneAuthFlow.tsx` | Phone OTP login & registration UI |
 | `src/contexts/auth-context.tsx` | Phone auth state & Firestore user sync |

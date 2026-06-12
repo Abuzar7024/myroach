@@ -8,6 +8,12 @@ export {
 } from "./config";
 
 export {
+  setFirebaseAppCheckDebugToken,
+  initFirebaseAppCheck,
+  getAppCheck,
+} from "./app-check";
+
+export {
   isFirestoreAvailable,
   shouldAttemptFirestore,
   withFirestoreFallback,
