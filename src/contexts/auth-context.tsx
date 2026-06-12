@@ -40,6 +40,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   logout: () => Promise<void>;
+  loginWithTestPhone: () => Promise<void>;
   sendPhoneOtp: (phone: string) => Promise<ConfirmationResult>;
   clearPhoneRecaptcha: () => void;
   verifyPhoneOtp: (confirmation: ConfirmationResult, code: string) => Promise<void>;
@@ -53,9 +54,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const mockUser: User = {
   id: "demo-user",
   email: "",
-  displayName: "Demo User",
+  displayName: "Test User",
   role: "customer",
-  phone: "+919876543210",
+  phone: "+918770206120",
   addresses: [],
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -225,6 +226,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearRecaptchaVerifier();
   };
 
+  const loginWithTestPhone = async () => {
+    setUser(mockUser);
+    setFirebaseUser(null);
+  };
+
   const clearPhoneRecaptcha = useCallback(() => {
     clearRecaptchaVerifier();
   }, []);
@@ -344,6 +350,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         sendPhoneOtp,
         clearPhoneRecaptcha,
+        loginWithTestPhone,
         verifyPhoneOtp,
         completeRegistration,
         updateUserProfile,

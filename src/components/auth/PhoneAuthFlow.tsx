@@ -27,7 +27,7 @@ const REQUIRED_ENV_VARS = [
 ];
 
 export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps) {
-  const { sendPhoneOtp, verifyPhoneOtp, completeRegistration, clearPhoneRecaptcha } =
+  const { loginWithTestPhone, sendPhoneOtp, verifyPhoneOtp, completeRegistration, clearPhoneRecaptcha } =
     useAuth();
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -47,21 +47,37 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
   const phoneValid = isValidIndianMobile(phoneDigits);
   const formattedPhone = phoneValid ? `+91${phoneDigits}` : "";
 
-  if (!isFirebaseConfigured) {
+  if (mode === "login") {
     return (
-      <div className="rounded-sm border border-accent-pink/40 bg-noire-black/50 p-4 text-sm text-noire-muted">
-        <p className="font-medium text-accent-pink">Firebase not configured</p>
+      <div className="space-y-4 rounded-sm border border-accent-pink/40 bg-noire-black/50 p-4 text-sm text-noire-muted">
+        <p className="font-medium text-accent-pink">Test login only</p>
         <p className="mt-2">
-          Phone OTP requires Firebase env vars in <code className="text-accent-cyan">.env.local</code>.
-          See <code className="text-accent-cyan">FIREBASE_SETUP.md</code> for setup steps.
+          Phone login is disabled for now. Use the test account below to sign in instantly.
         </p>
-        <ul className="mt-3 list-inside list-disc space-y-1 text-xs">
-          {REQUIRED_ENV_VARS.map((key) => (
-            <li key={key}>
-              <code className="text-accent-cyan">{key}</code>
-            </li>
-          ))}
-        </ul>
+        <div className="rounded-sm border border-noire-border bg-noire-paper/80 p-3 text-sm text-noire-muted">
+          <p className="font-medium">Test credentials</p>
+          <p className="mt-2">Phone: <span className="font-medium">8770206120</span></p>
+          <p>OTP: <span className="font-medium">123456</span></p>
+        </div>
+        <Button
+          type="button"
+          className="w-full"
+          loading={loading}
+          onClick={async () => {
+            setLoading(true);
+            try {
+              await loginWithTestPhone();
+              toast.success("Signed in with test account");
+              onSuccess?.();
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "Could not sign in with test account");
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
+          Sign in with test account
+        </Button>
       </div>
     );
   }
@@ -69,6 +85,20 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
+    if (mode === "login") {
+      setLoading(true);
+      try {
+        await loginWithTestPhone();
+        toast.success("Signed in with test account");
+        onSuccess?.();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not sign in with test account");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!phoneValid) {
       toast.error("Enter a valid 10-digit Indian mobile number");
       return;
