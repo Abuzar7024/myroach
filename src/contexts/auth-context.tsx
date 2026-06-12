@@ -3,6 +3,7 @@
 import {
   createContext,
   useContext,
+  useCallback,
   useEffect,
   useState,
   type ReactNode,
@@ -39,7 +40,8 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   logout: () => Promise<void>;
-  sendPhoneOtp: (phone: string, recaptchaContainerId: string) => Promise<ConfirmationResult>;
+  sendPhoneOtp: (phone: string, recaptchaTarget: HTMLElement) => Promise<ConfirmationResult>;
+  clearPhoneRecaptcha: () => void;
   verifyPhoneOtp: (confirmation: ConfirmationResult, code: string) => Promise<void>;
   completeRegistration: (name: string, address: RegistrationAddress) => Promise<void>;
   updateUserProfile: (data: Partial<User>) => Promise<void>;
@@ -60,6 +62,17 @@ const mockUser: User = {
 };
 
 let recaptchaVerifier: RecaptchaVerifier | null = null;
+
+function clearRecaptchaVerifier(): void {
+  if (recaptchaVerifier) {
+    try {
+      recaptchaVerifier.clear();
+    } catch {
+      // Widget may already be cleared or DOM unmounted.
+    }
+    recaptchaVerifier = null;
+  }
+}
 
 function formatIndianPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -192,13 +205,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (auth) await signOut(auth);
     setUser(null);
     setFirebaseUser(null);
-    if (recaptchaVerifier) {
-      recaptchaVerifier.clear();
-      recaptchaVerifier = null;
-    }
+    clearRecaptchaVerifier();
   };
 
-  const sendPhoneOtp = async (phone: string, recaptchaContainerId: string) => {
+  const clearPhoneRecaptcha = useCallback(() => {
+    clearRecaptchaVerifier();
+  }, []);
+
+  const sendPhoneOtp = async (phone: string, recaptchaTarget: HTMLElement) => {
     const auth = getAuth();
     if (!auth) {
       throw new Error(
@@ -206,44 +220,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    if (!document.getElementById(recaptchaContainerId)) {
+    if (!recaptchaTarget.isConnected) {
       throw new Error(
-        "reCAPTCHA container not ready. Wait for the page to finish loading and try again."
+        "reCAPTCHA target not ready. Wait for the page to finish loading and try again."
       );
     }
 
-    if (recaptchaVerifier) {
-      recaptchaVerifier.clear();
-      recaptchaVerifier = null;
-    }
+    clearRecaptchaVerifier();
 
-    recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainerId, {
+    recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaTarget, {
       size: "invisible",
       callback: () => {
         // Invisible reCAPTCHA solved — signInWithPhoneNumber proceeds.
       },
       "expired-callback": () => {
-        recaptchaVerifier?.clear();
-        recaptchaVerifier = null;
+        clearRecaptchaVerifier();
       },
     });
 
     try {
-      await recaptchaVerifier.render();
       const formatted = formatIndianPhone(phone);
       return await signInWithPhoneNumber(auth, formatted, recaptchaVerifier);
     } catch (error) {
-      recaptchaVerifier?.clear();
-      recaptchaVerifier = null;
+      clearRecaptchaVerifier();
       const message = error instanceof Error ? error.message : "Phone auth failed";
       if (message.includes("auth/operation-not-allowed")) {
         throw new Error(
           "Phone authentication is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → Phone."
         );
       }
-      if (message.includes("auth/invalid-app-credential") || message.includes("recaptcha")) {
+      if (
+        message.includes("auth/invalid-app-credential") ||
+        message.includes("recaptcha") ||
+        message.includes("already been rendered")
+      ) {
         throw new Error(
-          "reCAPTCHA failed. Add localhost and 127.0.0.1 under Firebase Console → Authentication → Settings → Authorized domains, or use a test phone number."
+          "reCAPTCHA failed. Add localhost and 127.0.0.1 under Firebase Console → Authentication → Settings → Authorized domains, or use test phone +91 9876543210 / OTP 123456."
         );
       }
       if (message.includes("auth/too-many-requests")) {
@@ -319,6 +331,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: user?.role === "admin",
         logout,
         sendPhoneOtp,
+        clearPhoneRecaptcha,
         verifyPhoneOtp,
         completeRegistration,
         updateUserProfile,

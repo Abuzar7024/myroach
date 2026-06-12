@@ -162,7 +162,9 @@ Upgrade: **Firebase Console → Upgrade** if you need live OTP delivery.
 
 ### Step 5 — reCAPTCHA (automatic)
 
-The app uses Firebase **invisible reCAPTCHA** via `RecaptchaVerifier` with `size: "invisible"` and container id `recaptcha-container`. No extra site key is needed — Firebase handles it when Phone auth is enabled and domains are authorized.
+The app uses Firebase **invisible reCAPTCHA** via `RecaptchaVerifier` with `size: "invisible"`, attached to the **Send OTP** button (no shared `#recaptcha-container` div). No extra site key is needed — Firebase handles it when Phone auth is enabled and domains are authorized.
+
+**Dev testing:** Use Firebase test phone `+91 9876543210` with OTP `123456` (configure under Authentication → Phone → Phone numbers for testing). No SMS is sent for test numbers.
 
 ### Step 6 — App Check (optional, production)
 

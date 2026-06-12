@@ -5,7 +5,11 @@ interface RecaptchaContainerProps {
   className?: string;
 }
 
-/** Must stay mounted before RecaptchaVerifier is created (Firebase Phone Auth). */
+/**
+ * Legacy container for RecaptchaVerifier by element id.
+ * Phone auth now attaches invisible reCAPTCHA to the Send OTP button instead.
+ * @deprecated Prefer button-attached RecaptchaVerifier in PhoneAuthFlow.
+ */
 export function RecaptchaContainer({
   id = "recaptcha-container",
   className,

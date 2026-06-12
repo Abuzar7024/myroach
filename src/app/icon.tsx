@@ -17,15 +17,12 @@ export default function Icon() {
           borderRadius: 6,
         }}
       >
-        <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
-          <ellipse cx="16" cy="18" rx="9" ry="6" fill="#00f0ff" opacity="0.95" />
-          <ellipse cx="16" cy="14" rx="5" ry="4" fill="#111118" stroke="#00f0ff" strokeWidth="1.2" />
-          <circle cx="13.5" cy="13.5" r="1" fill="#ff00aa" />
-          <circle cx="18.5" cy="13.5" r="1" fill="#ff00aa" />
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <ellipse cx="16" cy="19" rx="10" ry="6" fill="#00f0ff" />
           <path
-            d="M7 17 L3 14 M7 19 L2 19 M7 21 L3 24 M25 17 L29 14 M25 19 L30 19 M25 21 L29 24 M16 22 L14 28 M16 22 L18 28"
+            d="M13 15 L11 8 M19 15 L21 8"
             stroke="#00f0ff"
-            strokeWidth="1.4"
+            strokeWidth="2"
             strokeLinecap="round"
           />
         </svg>

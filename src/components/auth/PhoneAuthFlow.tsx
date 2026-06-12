@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ConfirmationResult } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RecaptchaContainer } from "@/components/auth/recaptcha-container";
 import { useAuth } from "@/contexts/auth-context";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { isValidIndianMobile } from "@/lib/auth-utils";
@@ -28,7 +27,9 @@ const REQUIRED_ENV_VARS = [
 ];
 
 export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps) {
-  const { sendPhoneOtp, verifyPhoneOtp, completeRegistration } = useAuth();
+  const { sendPhoneOtp, verifyPhoneOtp, completeRegistration, clearPhoneRecaptcha } =
+    useAuth();
+  const sendOtpButtonRef = useRef<HTMLButtonElement>(null);
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -40,6 +41,8 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
   const [pincode, setPincode] = useState("");
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => () => clearPhoneRecaptcha(), []);
 
   const phoneDigits = phone.replace(/\D/g, "").slice(-10);
   const phoneValid = isValidIndianMobile(phoneDigits);
@@ -66,13 +69,19 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     if (!phoneValid) {
       toast.error("Enter a valid 10-digit Indian mobile number");
       return;
     }
+    const button = sendOtpButtonRef.current;
+    if (!button) {
+      toast.error("Send OTP button not ready. Try again.");
+      return;
+    }
     setLoading(true);
     try {
-      const result = await sendPhoneOtp(phoneDigits, "recaptcha-container");
+      const result = await sendPhoneOtp(phoneDigits, button);
       setConfirmation(result);
       setStep("otp");
       toast.success("OTP sent to your phone");
@@ -286,6 +295,7 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
           className="w-full"
           disabled={loading}
           onClick={() => {
+            clearPhoneRecaptcha();
             setStep("phone");
             setOtp("");
             setConfirmation(null);
@@ -293,7 +303,6 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
         >
           Change phone number
         </Button>
-        <RecaptchaContainer />
       </form>
     );
   }
@@ -324,8 +333,13 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
           <p className="mt-1 text-xs text-red-500">Enter a valid 10-digit mobile number</p>
         )}
       </div>
-      <RecaptchaContainer />
-      <Button type="submit" className="w-full" loading={loading} disabled={!phoneValid}>
+      <Button
+        ref={sendOtpButtonRef}
+        type="submit"
+        className="w-full"
+        loading={loading}
+        disabled={!phoneValid || loading}
+      >
         Send OTP
       </Button>
     </form>
