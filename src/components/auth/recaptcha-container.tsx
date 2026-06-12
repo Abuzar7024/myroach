@@ -1,30 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-
 interface RecaptchaContainerProps {
   id?: string;
   className?: string;
 }
 
+/** Must stay mounted before RecaptchaVerifier is created (Firebase Phone Auth). */
 export function RecaptchaContainer({
   id = "recaptcha-container",
   className,
 }: RecaptchaContainerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.id = id;
-    }
-  }, [id]);
-
-  return (
-    <div
-      ref={containerRef}
-      id={id}
-      className={className}
-      aria-hidden="true"
-    />
-  );
+  return <div id={id} className={className} aria-hidden="true" />;
 }

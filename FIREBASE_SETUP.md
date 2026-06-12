@@ -124,10 +124,21 @@ MY ROACH uses **phone-only sign-in**. Email/password and Google are not used in 
 | Domain | When |
 |--------|------|
 | `localhost` | Local dev (added by default) |
+| `127.0.0.1` | Local dev via IP — add manually if OTP fails on localhost |
 | Your production domain | e.g. `myroach.in` |
-| Vercel preview domain | e.g. `*.vercel.app` if deploying to Vercel |
+| Vercel preview domain | e.g. `your-app.vercel.app` if deploying to Vercel |
 
 Firebase uses invisible reCAPTCHA on web — the domain must be authorized or OTP send will fail.
+
+> **Localhost note:** Firebase Phone Auth has known limitations on `localhost`. For local dev, use **test phone numbers** (recommended) or deploy to Vercel and add that domain to authorized domains. Still add both `localhost` and `127.0.0.1` in the console.
+
+### Step 2b — SMS region policy (India +91)
+
+1. **Authentication → Settings → SMS region policy**
+2. Choose **Allow** (or **Deny** with exceptions)
+3. Add **India (+91)** to the allowed list
+
+Without this, real SMS to Indian numbers may be blocked even when Phone auth is enabled.
 
 ### Step 3 — Test phone numbers (no SMS required)
 
@@ -228,7 +239,8 @@ Build should complete without Firestore-related failures.
 | Issue | Fix |
 |-------|-----|
 | `auth/operation-not-allowed` | Enable Phone provider |
-| reCAPTCHA / domain error | Add `localhost` to authorized domains |
+| reCAPTCHA / domain error | Add `localhost` and `127.0.0.1` to authorized domains; use test numbers locally |
+| SMS blocked for +91 | Enable India in SMS region policy |
 | Invalid OTP | Use exact test code from Firebase Console |
 | SMS not received (real number) | Upgrade to Blaze plan |
 | "Firebase not configured" | Fill all required env vars and restart dev server |
@@ -244,6 +256,19 @@ Build should complete without Firestore-related failures.
 | Seed script permission denied | Deploy rules or use Admin SDK |
 | Phone OTP fails | Enable Phone provider, authorized domains, test numbers |
 | Orders not syncing | Deploy rules; ensure user is logged in |
+
+---
+
+## Firebase Console checklist (you must do manually)
+
+Complete these in [Firebase Console](https://console.firebase.google.com/project/myroach-6cc80/authentication/providers) for project **myroach-6cc80**:
+
+1. **Enable Phone sign-in** — Authentication → Sign-in method → Phone → Enable
+2. **SMS region policy — allow India** — Authentication → Settings → SMS region policy → allow **India (+91)**
+3. **Authorized domains** — Authentication → Settings → Authorized domains → add `localhost`, `127.0.0.1`, and your production domain (e.g. Vercel URL or custom domain)
+4. **Add test phone number** — Authentication → Sign-in method → Phone → Phone numbers for testing → `+91 9876543210` / code `123456`
+5. **Enable Firestore API** — [Google Cloud Console](https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=myroach-6cc80) → Enable (if not already)
+6. **Blaze plan for production real SMS** — Firebase Console → Upgrade (Spark/free plan works with test numbers only)
 
 ---
 

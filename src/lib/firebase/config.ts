@@ -56,11 +56,12 @@ export function getFirebaseApp(): FirebaseApp {
 let auth: Auth | undefined;
 
 export function getAuth(): Auth | null {
-  if (!isFirebaseConfigured) {
+  if (typeof window === "undefined" || !isFirebaseConfigured) {
     return null;
   }
   if (!auth) {
     auth = getFirebaseAuth(getFirebaseApp());
+    auth.languageCode = "en";
   }
   return auth;
 }

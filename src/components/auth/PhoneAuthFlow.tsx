@@ -96,8 +96,8 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
         toast.success("Signed in successfully");
         onSuccess?.();
       }
-    } catch {
-      toast.error("Invalid OTP. Please try again.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Invalid OTP. Please try again.");
     } finally {
       setLoading(false);
     }

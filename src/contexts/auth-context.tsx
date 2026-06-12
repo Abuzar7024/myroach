@@ -206,6 +206,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
     }
 
+    if (!document.getElementById(recaptchaContainerId)) {
+      throw new Error(
+        "reCAPTCHA container not ready. Wait for the page to finish loading and try again."
+      );
+    }
+
     if (recaptchaVerifier) {
       recaptchaVerifier.clear();
       recaptchaVerifier = null;
@@ -213,9 +219,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainerId, {
       size: "invisible",
+      callback: () => {
+        // Invisible reCAPTCHA solved — signInWithPhoneNumber proceeds.
+      },
+      "expired-callback": () => {
+        recaptchaVerifier?.clear();
+        recaptchaVerifier = null;
+      },
     });
 
     try {
+      await recaptchaVerifier.render();
       const formatted = formatIndianPhone(phone);
       return await signInWithPhoneNumber(auth, formatted, recaptchaVerifier);
     } catch (error) {
@@ -229,8 +243,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (message.includes("auth/invalid-app-credential") || message.includes("recaptcha")) {
         throw new Error(
-          "reCAPTCHA failed. Add your domain under Firebase Console → Authentication → Settings → Authorized domains."
+          "reCAPTCHA failed. Add localhost and 127.0.0.1 under Firebase Console → Authentication → Settings → Authorized domains, or use a test phone number."
         );
+      }
+      if (message.includes("auth/too-many-requests")) {
+        throw new Error("Too many OTP requests. Wait a few minutes and try again.");
       }
       throw new Error(message);
     }
