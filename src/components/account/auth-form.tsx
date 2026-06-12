@@ -3,6 +3,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/auth-context";
+import { TEST_OTP, TEST_PHONE } from "@/lib/auth-utils";
 import { FadeIn } from "@/components/ui/motion";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -54,7 +55,7 @@ export function AuthForm() {
       <FadeIn>
         <h1 className="font-display text-center text-3xl font-light">Account</h1>
         <p className="mt-2 text-center text-sm text-noire-muted">
-          Sign in with your phone number
+          Test login — phone {TEST_PHONE}, OTP {TEST_OTP}
         </p>
         <div className="mt-8">
           <PhoneAuthFlow mode="login" />

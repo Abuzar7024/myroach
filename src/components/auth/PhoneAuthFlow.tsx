@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { ConfirmationResult } from "firebase/auth";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
-import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { isValidIndianMobile } from "@/lib/auth-utils";
+import {
+  isValidIndianMobile,
+  TEST_OTP,
+  TEST_PHONE,
+  normalizePhoneDigits,
+} from "@/lib/auth-utils";
 import { toast } from "sonner";
 
 type Step = "phone" | "otp" | "name" | "address";
@@ -17,20 +20,10 @@ interface PhoneAuthFlowProps {
   onSuccess?: () => void;
 }
 
-const REQUIRED_ENV_VARS = [
-  "NEXT_PUBLIC_FIREBASE_API_KEY",
-  "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-  "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-  "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
-  "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
-  "NEXT_PUBLIC_FIREBASE_APP_ID",
-];
-
 export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps) {
-  const { loginWithTestPhone, sendPhoneOtp, verifyPhoneOtp, completeRegistration, clearPhoneRecaptcha } =
-    useAuth();
+  const { signInWithTestCredentials, completeTestRegistration } = useAuth();
   const [step, setStep] = useState<Step>("phone");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(TEST_PHONE);
   const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
   const [line1, setLine1] = useState("");
@@ -38,99 +31,42 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [pincode, setPincode] = useState("");
-  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => () => clearPhoneRecaptcha(), []);
-
-  const phoneDigits = phone.replace(/\D/g, "").slice(-10);
+  const phoneDigits = normalizePhoneDigits(phone);
   const phoneValid = isValidIndianMobile(phoneDigits);
   const formattedPhone = phoneValid ? `+91${phoneDigits}` : "";
 
-  if (mode === "login") {
-    return (
-      <div className="space-y-4 rounded-sm border border-accent-pink/40 bg-noire-black/50 p-4 text-sm text-noire-muted">
-        <p className="font-medium text-accent-pink">Test login only</p>
-        <p className="mt-2">
-          Phone login is disabled for now. Use the test account below to sign in instantly.
-        </p>
-        <div className="rounded-sm border border-noire-border bg-noire-paper/80 p-3 text-sm text-noire-muted">
-          <p className="font-medium">Test credentials</p>
-          <p className="mt-2">Phone: <span className="font-medium">8770206120</span></p>
-          <p>OTP: <span className="font-medium">123456</span></p>
-        </div>
-        <Button
-          type="button"
-          className="w-full"
-          loading={loading}
-          onClick={async () => {
-            setLoading(true);
-            try {
-              await loginWithTestPhone();
-              toast.success("Signed in with test account");
-              onSuccess?.();
-            } catch (error) {
-              toast.error(error instanceof Error ? error.message : "Could not sign in with test account");
-            } finally {
-              setLoading(false);
-            }
-          }}
-        >
-          Sign in with test account
-        </Button>
-      </div>
-    );
-  }
-
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleContinueToOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
-    if (mode === "login") {
-      setLoading(true);
-      try {
-        await loginWithTestPhone();
-        toast.success("Signed in with test account");
-        onSuccess?.();
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Could not sign in with test account");
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
     if (!phoneValid) {
-      toast.error("Enter a valid 10-digit Indian mobile number");
+      toast.error("Enter a valid 10-digit mobile number");
       return;
     }
-    setLoading(true);
-    try {
-      const result = await sendPhoneOtp(phoneDigits);
-      setConfirmation(result);
-      setStep("otp");
-      toast.success("OTP sent to your phone");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not send OTP");
-    } finally {
-      setLoading(false);
+    if (phoneDigits !== TEST_PHONE) {
+      toast.error(`Test mode only — use phone ${TEST_PHONE}`);
+      return;
     }
+    setStep("otp");
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!confirmation || otp.length !== 6) return;
+    if (otp.length !== 6) return;
+
     setLoading(true);
     try {
-      await verifyPhoneOtp(confirmation, otp);
       if (mode === "register") {
+        await signInWithTestCredentials(phoneDigits, otp, { forRegistration: true });
         setStep("name");
         toast.success("Phone verified — almost there");
       } else {
+        await signInWithTestCredentials(phoneDigits, otp);
         toast.success("Signed in successfully");
         onSuccess?.();
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Invalid OTP. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Invalid OTP");
     } finally {
       setLoading(false);
     }
@@ -155,9 +91,10 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
       toast.error("Enter a valid 6-digit pincode");
       return;
     }
+
     setLoading(true);
     try {
-      await completeRegistration(name.trim(), {
+      await completeTestRegistration(name.trim(), {
         line1: line1.trim(),
         line2: line2.trim() || undefined,
         city: city.trim(),
@@ -176,17 +113,10 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
   if (step === "address") {
     return (
       <form onSubmit={handleCompleteRegistration} className="space-y-4">
-        <p className="text-sm text-noire-muted">
-          Step 3 of 3 — where should we ship your drip?
-        </p>
+        <p className="text-sm text-noire-muted">Step 3 of 3 — where should we ship your drip?</p>
         <div>
           <Label htmlFor="addr-phone">Phone</Label>
-          <Input
-            id="addr-phone"
-            value={formattedPhone}
-            disabled
-            className="mt-2 opacity-70"
-          />
+          <Input id="addr-phone" value={formattedPhone} disabled className="mt-2 opacity-70" />
         </div>
         <div>
           <Label htmlFor="addr-line1">Address Line 1</Label>
@@ -267,9 +197,7 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
   if (step === "name") {
     return (
       <form onSubmit={handleNameSubmit} className="space-y-4">
-        <p className="text-sm text-noire-muted">
-          Step 2 of 3 — what should we call you?
-        </p>
+        <p className="text-sm text-noire-muted">Step 2 of 3 — what should we call you?</p>
         <div>
           <Label htmlFor="reg-name">Full Name</Label>
           <Input
@@ -293,7 +221,7 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
     return (
       <form onSubmit={handleVerifyOtp} className="space-y-4">
         <p className="text-sm text-noire-muted">
-          Enter the 6-digit code sent to +91 {phoneDigits}
+          Enter the test OTP for +91 {phoneDigits}
         </p>
         <div>
           <Label htmlFor="otp-code">OTP Code</Label>
@@ -304,7 +232,7 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
             maxLength={6}
             value={otp}
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            placeholder="000000"
+            placeholder="123456"
             required
             autoFocus
             className="mt-2 text-center text-lg tracking-[0.5em]"
@@ -319,10 +247,8 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
           className="w-full"
           disabled={loading}
           onClick={() => {
-            clearPhoneRecaptcha();
             setStep("phone");
             setOtp("");
-            setConfirmation(null);
           }}
         >
           Change phone number
@@ -332,7 +258,11 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
   }
 
   return (
-    <form onSubmit={handleSendOtp} className="space-y-4">
+    <form onSubmit={handleContinueToOtp} className="space-y-4">
+      <div className="rounded-sm border border-accent-cyan/30 bg-noire-black/40 p-3 text-sm text-noire-muted">
+        <p className="font-medium text-accent-cyan">Test mode</p>
+        <p className="mt-1">No SMS — use the test phone and OTP below.</p>
+      </div>
       <div>
         <Label htmlFor="phone-number">Phone Number</Label>
         <div className="mt-2 flex gap-2">
@@ -344,13 +274,8 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
             type="tel"
             inputMode="numeric"
             value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-            placeholder="8770206120"
-            required
-            minLength={10}
-            maxLength={10}
-            autoFocus
-            className="flex-1"
+            readOnly
+            className="flex-1 opacity-90"
           />
         </div>
         {phone.length > 0 && !phoneValid && (
@@ -358,17 +283,16 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
         )}
       </div>
       <div className="rounded-sm border border-noire-border bg-noire-paper/80 p-3 text-sm text-noire-muted">
-        <p className="font-medium">Test phone credentials</p>
-        <p className="mt-2">Phone: <span className="font-medium">8770206120</span></p>
-        <p>OTP: <span className="font-medium">123456</span></p>
+        <p className="font-medium">Test credentials</p>
+        <p className="mt-2">
+          Phone: <span className="font-medium text-foreground">{TEST_PHONE}</span>
+        </p>
+        <p>
+          OTP: <span className="font-medium text-foreground">{TEST_OTP}</span>
+        </p>
       </div>
-      <Button
-        type="submit"
-        className="w-full"
-        loading={loading}
-        disabled={!phoneValid || loading}
-      >
-        Send OTP
+      <Button type="submit" className="w-full">
+        Continue with test number
       </Button>
     </form>
   );

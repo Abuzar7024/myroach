@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { FadeIn } from "@/components/ui/motion";
-import { getAndClearReturnUrl } from "@/lib/auth-utils";
+import { getAndClearReturnUrl, TEST_OTP, TEST_PHONE } from "@/lib/auth-utils";
 
 const PhoneAuthFlow = dynamic(
   () => import("@/components/auth/PhoneAuthFlow").then((m) => m.PhoneAuthFlow),
@@ -34,7 +34,7 @@ export default function LoginPage() {
             Sign In
           </h1>
           <p className="mt-2 text-sm text-noire-muted">
-            Enter your phone to continue — browse free, buy when ready
+            Test login — phone {TEST_PHONE}, OTP {TEST_OTP}
           </p>
         </div>
 

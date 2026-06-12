@@ -7,6 +7,8 @@ let availability: FirestoreAvailability = "unknown";
 let devWarned = false;
 let loggingInitialized = false;
 
+const FIRESTORE_TIMEOUT_MS = 4000;
+
 export function initFirestoreLogging(): void {
   if (loggingInitialized) return;
   loggingInitialized = true;
@@ -50,6 +52,8 @@ export function isFirestoreAvailable(): boolean {
 
 /** Whether a Firestore read/write should be attempted (skips after first recoverable failure). */
 export function shouldAttemptFirestore(): boolean {
+  // Server components should not block on Firestore network calls — use mock data instead.
+  if (typeof window === "undefined") return false;
   return isFirebaseConfigured && availability !== "unavailable";
 }
 
@@ -64,11 +68,19 @@ export async function withFirestoreFallback<T>(
   }
 
   try {
-    const result = await operation();
+    const result = await Promise.race([
+      operation(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Firestore timeout")), FIRESTORE_TIMEOUT_MS)
+      ),
+    ]);
     markFirestoreAvailable();
     return result;
   } catch (error) {
-    if (isRecoverableFirestoreError(error)) {
+    if (
+      isRecoverableFirestoreError(error) ||
+      (error instanceof Error && error.message === "Firestore timeout")
+    ) {
       markFirestoreUnavailable();
       return fallback();
     }
