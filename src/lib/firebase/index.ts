@@ -5,6 +5,7 @@ export {
   getStorage,
   getAnalytics,
   isFirebaseConfigured,
+  isMockDataMode,
 } from "./config";
 
 export {

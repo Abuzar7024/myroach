@@ -29,8 +29,18 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
+/** MVP / local testing — skip Firestore, Auth network, and App Check. */
+export function isMockDataMode(): boolean {
+  const flag = process.env.NEXT_PUBLIC_USE_MOCK_DATA;
+  if (flag === "true") return true;
+  if (flag === "false") return false;
+  // Default to mock data in development when not explicitly disabled.
+  return process.env.NODE_ENV === "development";
+}
+
 export const isFirebaseConfigured = Boolean(
-  firebaseConfig.apiKey &&
+  !isMockDataMode() &&
+    firebaseConfig.apiKey &&
     firebaseConfig.projectId &&
     firebaseConfig.apiKey !== "your_api_key_here"
 );

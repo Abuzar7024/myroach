@@ -1,5 +1,5 @@
 import { setLogLevel } from "firebase/firestore";
-import { isFirebaseConfigured } from "./config";
+import { isFirebaseConfigured, isMockDataMode } from "./config";
 
 type FirestoreAvailability = "unknown" | "available" | "unavailable";
 
@@ -52,6 +52,7 @@ export function isFirestoreAvailable(): boolean {
 
 /** Whether a Firestore read/write should be attempted (skips after first recoverable failure). */
 export function shouldAttemptFirestore(): boolean {
+  if (isMockDataMode()) return false;
   // Server components should not block on Firestore network calls — use mock data instead.
   if (typeof window === "undefined") return false;
   return isFirebaseConfigured && availability !== "unavailable";
