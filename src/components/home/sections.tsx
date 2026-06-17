@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowRight } from "lucide-react";
 import { FadeIn } from "@/components/ui/motion";
+import { ComingSoonBlock } from "@/components/home/empty-states";
+import { PROMO_FALLBACK_IMAGE, SHOP_TEASER_IMAGE } from "@/lib/home-fallbacks";
 import { testimonials, instagramPosts } from "@/data/mock-data";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
@@ -30,6 +32,9 @@ interface ProductSectionProps {
   products: Product[];
   viewAllHref: string;
   loading?: boolean;
+  limit?: number;
+  emptyTitle?: string;
+  emptySubtitle?: string;
 }
 
 export function ProductSection({
@@ -38,8 +43,12 @@ export function ProductSection({
   products,
   viewAllHref,
   loading = false,
+  limit = 4,
+  emptyTitle = "Drop loading…",
+  emptySubtitle = "Nothing in the rotation yet — admin's stacking heat as we speak. Pull up later for the full send, no cap.",
 }: ProductSectionProps) {
   const showSkeletons = loading && products.length === 0;
+  const visible = products.slice(0, limit);
 
   return (
     <section className="py-16 lg:py-24">
@@ -61,34 +70,43 @@ export function ProductSection({
           </div>
           {showSkeletons ? (
             <Shimmer className="hidden h-11 w-28 bg-noire-charcoal sm:block" />
-          ) : (
+          ) : products.length > 0 ? (
             <Button asChild variant="ghost" className="hidden sm:flex">
               <Link href={viewAllHref}>
                 View All <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-          )}
+          ) : null}
         </FadeIn>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
-          {showSkeletons
-            ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)
-            : products.slice(0, 4).map((product, i) => (
-                <ProductCard key={product.id} product={product} priority={i < 2} />
-              ))}
-        </div>
-        {!showSkeletons && products.length === 0 && !loading && (
-          <p className="py-12 text-center text-sm text-noire-muted">
-            No products yet — add them in the admin panel.
-          </p>
+        {showSkeletons ? (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+            {Array.from({ length: Math.min(limit, 4) }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : visible.length > 0 ? (
+          <div
+            className={
+              limit > 4
+                ? "grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6"
+                : "grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6"
+            }
+          >
+            {visible.map((product, i) => (
+              <ProductCard key={product.id} product={product} priority={i < 2} />
+            ))}
+          </div>
+        ) : (
+          <ComingSoonBlock title={emptyTitle} subtitle={emptySubtitle} ctaHref="/shop" />
         )}
         <div className="mt-8 text-center sm:hidden">
           {showSkeletons ? (
             <Shimmer className="mx-auto h-11 w-full max-w-xs bg-noire-charcoal" />
-          ) : (
+          ) : products.length > 0 ? (
             <Button asChild variant="outline">
               <Link href={viewAllHref}>View All</Link>
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
     </section>
@@ -120,6 +138,52 @@ export function PromoBanner({
             <Link href="/shop">Full Send → Shop</Link>
           </Button>
         </FadeIn>
+        <FadeIn className="relative aspect-square lg:aspect-auto lg:min-h-[400px]">
+          <Image
+            src={PROMO_FALLBACK_IMAGE}
+            alt="MY ROACH promo"
+            fill
+            className="object-cover"
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-accent-cyan/10 mix-blend-overlay" />
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
+export function ShopTeaserSection() {
+  return (
+    <section className="relative overflow-hidden py-4">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="relative min-h-[280px] overflow-hidden border border-accent-cyan/30 sm:min-h-[360px]">
+          <Image
+            src={SHOP_TEASER_IMAGE}
+            alt="Explore MY ROACH streetwear"
+            fill
+            className="object-cover"
+            sizes="(max-width: 1280px) 100vw, 1280px"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-noire-black/90 via-noire-black/60 to-transparent" />
+          <div className="relative z-[1] flex h-full min-h-[280px] flex-col justify-center p-8 sm:min-h-[360px] sm:p-12 lg:p-16">
+            <span className="sticker sticker-lime w-fit">explore everything</span>
+            <h2 className="font-display mt-4 max-w-xl text-3xl tracking-wide text-noire-white sm:text-4xl md:text-5xl">
+              THE FULL ROTATION AWAITS
+            </h2>
+            <p className="mt-4 max-w-md text-sm text-noire-white/75">
+              Every fit, every lane — hoodies to accessories. Drip check yourself before the group chat does, bhai.
+            </p>
+            <Button asChild variant="neon" size="lg" className="mt-8 w-fit">
+              <Link href="/shop">
+                Enter the Shop
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </section>
   );

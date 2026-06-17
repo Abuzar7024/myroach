@@ -7,6 +7,7 @@ import {
   ProductSection,
   PromoBanner,
   BrandStory,
+  ShopTeaserSection,
   Newsletter,
 } from "@/components/home/sections";
 import { useProducts } from "@/hooks/use-products";
@@ -22,6 +23,14 @@ export function HomePageLive() {
   const { banners, loading: bannersLoading } = useBanners("hero");
   const { homepage, loading: homepageLoading } = useHomepage();
   const { settings } = useSettings();
+
+  const latestProducts = useMemo(
+    () =>
+      [...products]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 8),
+    [products]
+  );
 
   const newArrivals = useMemo(() => {
     if (homepage.newArrivalIds?.length) {
@@ -50,12 +59,15 @@ export function HomePageLive() {
     return categories;
   }, [categories, homepage.featuredCollectionIds]);
 
-  const loading = productsLoading || categoriesLoading || homepageLoading;
+  const initialLoad =
+    (productsLoading || categoriesLoading || bannersLoading || homepageLoading) &&
+    products.length === 0 &&
+    banners.length === 0;
 
-  if (loading && products.length === 0 && banners.length === 0) {
+  if (initialLoad) {
     return (
       <div className="space-y-8 px-4 py-16">
-        <Skeleton className="mx-auto h-[420px] max-w-7xl" />
+        <Skeleton className="mx-auto h-[min(88vh,560px)] max-w-7xl" />
         <Skeleton className="mx-auto h-64 max-w-7xl" />
       </div>
     );
@@ -64,7 +76,20 @@ export function HomePageLive() {
   return (
     <>
       <SplitScreenHero banners={banners} loading={bannersLoading} />
-      <FeaturedCollections categories={featuredCategories} />
+
+      <FeaturedCollections categories={featuredCategories} loading={categoriesLoading} />
+
+      <ProductSection
+        title="LATEST DROPS"
+        subtitle="just landed 🔥"
+        products={latestProducts.length > 0 ? latestProducts : products}
+        viewAllHref="/shop?sort=newest"
+        loading={productsLoading}
+        limit={8}
+        emptyTitle="First drop loading"
+        emptySubtitle="The roach is in the lab cooking fits. Latest heat posts here the second admin hits publish — W in chat soon, bhai."
+      />
+
       {homepage.showNewArrivals !== false && (
         <ProductSection
           title="FRESH HEAT"
@@ -72,8 +97,11 @@ export function HomePageLive() {
           products={newArrivals}
           viewAllHref="/shop?filter=new"
           loading={productsLoading}
+          emptyTitle="New arrivals incoming"
+          emptySubtitle="Nothing tagged fresh yet — but the underground never sleeps. New fits drop without warning, stay locked in."
         />
       )}
+
       {homepage.showPromo !== false && (
         <PromoBanner
           title={homepage.promoTitle}
@@ -81,6 +109,7 @@ export function HomePageLive() {
           freeShippingThreshold={settings.freeShippingThreshold}
         />
       )}
+
       {homepage.showBestSellers !== false && (
         <ProductSection
           title="CERTIFIED HEAT"
@@ -88,8 +117,12 @@ export function HomePageLive() {
           products={bestSellers}
           viewAllHref="/shop?sort=popular"
           loading={productsLoading}
+          emptyTitle="Best sellers TBD"
+          emptySubtitle="Nobody's copped yet 'cause the rotation's still loading. Be the first to full send when heat lands."
         />
       )}
+
+      <ShopTeaserSection />
       <BrandStory />
       <Newsletter />
     </>

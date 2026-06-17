@@ -52,7 +52,11 @@ export default function RootLayout({
       : undefined;
 
   return (
-    <html lang="en" className={`${orbitron.variable} ${rajdhani.variable} h-full`}>
+    <html
+      lang="en"
+      className={`${orbitron.variable} ${rajdhani.variable} h-full`}
+      suppressHydrationWarning
+    >
       <head>
         {appCheckDebugToken ? (
           <script
@@ -63,7 +67,10 @@ export default function RootLayout({
           />
         ) : null}
       </head>
-      <body className="min-h-full flex flex-col antialiased cyber-grid text-foreground bg-background">
+      <body
+        className="min-h-full flex flex-col antialiased cyber-grid text-foreground bg-background"
+        suppressHydrationWarning
+      >
         <Providers>
           <SiteShell>{children}</SiteShell>
         </Providers>
