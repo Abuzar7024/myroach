@@ -66,6 +66,8 @@ export interface Product {
   material?: string;
   careInstructions?: string;
   isActive: boolean;
+  /** Total units in stock (from admin `stock` or sum of variant stock). */
+  stock?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -175,6 +177,8 @@ export interface Review {
   title: string;
   comment: string;
   isVerified: boolean;
+  /** Admin-approved reviews only shown on storefront. */
+  isApproved?: boolean;
   createdAt: string;
 }
 

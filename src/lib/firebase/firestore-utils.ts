@@ -35,7 +35,7 @@ export function markFirestoreUnavailable(): void {
   if (process.env.NODE_ENV === "development" && !devWarned) {
     devWarned = true;
     console.warn(
-      "[MY ROACH] Firestore unavailable — using mock data. See FIREBASE_SETUP.md to enable."
+      "[MY ROACH] Firestore unavailable — check rules, App Check, and FIREBASE_SETUP.md."
     );
   }
 }
@@ -50,12 +50,11 @@ export function isFirestoreAvailable(): boolean {
   return availability !== "unavailable";
 }
 
-/** Whether a Firestore read/write should be attempted (skips after first recoverable failure). */
+/** Whether a Firestore read/write should be attempted. */
 export function shouldAttemptFirestore(): boolean {
   if (isMockDataMode()) return false;
-  // Server components should not block on Firestore network calls — use mock data instead.
-  if (typeof window === "undefined") return false;
-  return isFirebaseConfigured && availability !== "unavailable";
+  if (!isFirebaseConfigured) return false;
+  return availability !== "unavailable";
 }
 
 export async function withFirestoreFallback<T>(
@@ -64,7 +63,11 @@ export async function withFirestoreFallback<T>(
 ): Promise<T> {
   initFirestoreLogging();
 
-  if (!shouldAttemptFirestore()) {
+  if (isMockDataMode()) {
+    return fallback();
+  }
+
+  if (!isFirebaseConfigured) {
     return fallback();
   }
 
@@ -83,7 +86,6 @@ export async function withFirestoreFallback<T>(
       (error instanceof Error && error.message === "Firestore timeout")
     ) {
       markFirestoreUnavailable();
-      return fallback();
     }
     throw error;
   }

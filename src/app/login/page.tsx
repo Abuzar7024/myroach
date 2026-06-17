@@ -5,22 +5,22 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { FadeIn } from "@/components/ui/motion";
 import { getAndClearReturnUrl, TEST_OTP, TEST_PHONE } from "@/lib/auth-utils";
+import { isMockDataMode } from "@/lib/config";
+import { ADMIN_PANEL_URL } from "@/lib/config";
+
+const EmailAuthFlow = dynamic(
+  () => import("@/components/auth/EmailAuthFlow").then((m) => m.EmailAuthFlow),
+  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-sm bg-noire-border/40" /> }
+);
 
 const PhoneAuthFlow = dynamic(
   () => import("@/components/auth/PhoneAuthFlow").then((m) => m.PhoneAuthFlow),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="space-y-4 py-2">
-        <div className="h-11 animate-pulse rounded-sm bg-noire-border/40" />
-        <div className="h-11 animate-pulse rounded-sm bg-noire-border/40" />
-      </div>
-    ),
-  }
+  { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-sm bg-noire-border/40" /> }
 );
 
 export default function LoginPage() {
   const router = useRouter();
+  const mockMode = isMockDataMode();
 
   const handleAuthSuccess = () => {
     router.push(getAndClearReturnUrl("/account"));
@@ -34,12 +34,18 @@ export default function LoginPage() {
             Sign In
           </h1>
           <p className="mt-2 text-sm text-noire-muted">
-            Test login — phone {TEST_PHONE}, OTP {TEST_OTP}
+            {mockMode
+              ? `Test login — phone ${TEST_PHONE}, OTP ${TEST_OTP}`
+              : "Sign in with your Firebase account (same as admin panel project)"}
           </p>
         </div>
 
         <div className="mt-8">
-          <PhoneAuthFlow mode="login" onSuccess={handleAuthSuccess} />
+          {mockMode ? (
+            <PhoneAuthFlow mode="login" onSuccess={handleAuthSuccess} />
+          ) : (
+            <EmailAuthFlow mode="login" onSuccess={handleAuthSuccess} />
+          )}
         </div>
 
         <p className="mt-8 text-center text-sm text-noire-muted">
@@ -48,6 +54,15 @@ export default function LoginPage() {
             Create one
           </Link>
         </p>
+
+        {!mockMode && (
+          <p className="mt-4 text-center text-xs text-noire-muted">
+            Admin?{" "}
+            <a href={`${ADMIN_PANEL_URL}/login`} className="text-accent-cyan hover:underline">
+              Open admin panel
+            </a>
+          </p>
+        )}
       </FadeIn>
     </div>
   );

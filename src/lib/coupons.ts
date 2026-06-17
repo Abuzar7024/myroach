@@ -1,8 +1,14 @@
-import { coupons } from "@/data/mock-data";
+import type { Coupon } from "@/types";
 import { formatPrice } from "@/lib/format";
 
-export function validateCoupon(code: string, subtotal: number): { valid: boolean; discount: number; message: string } {
-  const coupon = coupons.find((c) => c.code.toUpperCase() === code.toUpperCase() && c.isActive);
+export function validateCoupon(
+  code: string,
+  subtotal: number,
+  couponList: Coupon[]
+): { valid: boolean; discount: number; message: string } {
+  const coupon = couponList.find(
+    (c) => c.code.toUpperCase() === code.toUpperCase() && c.isActive
+  );
 
   if (!coupon) {
     return { valid: false, discount: 0, message: "Invalid coupon code" };

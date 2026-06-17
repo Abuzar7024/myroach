@@ -1,36 +1,36 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchCategories } from "@/lib/firebase/services/categories";
+import { subscribeCategories } from "@/lib/firebase/services/category.service";
+import { isMockDataMode } from "@/lib/config";
 import type { Category } from "@/types";
-import type { DataSource } from "@/lib/firebase/services/products";
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [source, setSource] = useState<DataSource>("mock");
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      try {
-        const result = await fetchCategories();
-        if (!cancelled) {
-          setCategories(result.data);
-          setSource(result.source);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    if (isMockDataMode()) {
+      import("@/data/mock-data").then(({ categories }) => {
+        setCategories(categories.filter((c) => c.isActive));
+        setLoading(false);
+      });
+      return;
     }
 
-    load();
-    return () => {
-      cancelled = true;
-    };
+    setLoading(true);
+    const unsub = subscribeCategories(
+      (items) => {
+        setCategories(items);
+        setLoading(false);
+      },
+      () => {
+        setCategories([]);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
   }, []);
 
-  return { categories, loading, source };
+  return { categories, loading };
 }

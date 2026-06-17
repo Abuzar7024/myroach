@@ -20,6 +20,7 @@ import { MobileOrderSummary } from "@/components/layout/mobile-order-summary";
 import { useCartStore } from "@/store/cart-store";
 import { formatPrice } from "@/lib/format";
 import { validateCoupon } from "@/lib/coupons";
+import { useCoupons } from "@/hooks/use-coupons";
 import { SHIPPING_RATES, FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { toast } from "sonner";
@@ -141,6 +142,7 @@ export function CartContent() {
     shippingId,
     setShippingId,
   } = useCartStore();
+  const { coupons } = useCoupons();
   const [couponInput, setCouponInput] = useState("");
   const [removeTarget, setRemoveTarget] = useState<PendingRemove | null>(null);
   const [couponSuccessOpen, setCouponSuccessOpen] = useState(false);
@@ -151,7 +153,11 @@ export function CartContent() {
   const total = getTotal();
 
   const applyCoupon = () => {
-    const result = validateCoupon(couponInput, subtotal);
+    if (coupons.length === 0) {
+      toast.error("No coupons available yet");
+      return;
+    }
+    const result = validateCoupon(couponInput, subtotal, coupons);
     if (result.valid) {
       setCoupon(couponInput.toUpperCase(), result.discount);
       setCouponSuccessMsg(result.message);

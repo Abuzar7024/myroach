@@ -61,5 +61,15 @@ service cloud.firestore {
     match /wishlist/{userId} {
       allow read, write: if isOwner(userId);
     }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /subscribers/{id} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
   }
 }

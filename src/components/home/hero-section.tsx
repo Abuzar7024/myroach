@@ -26,7 +26,7 @@ export function FeaturedCollections({ categories }: FeaturedCollectionsProps) {
           {categories.map((cat) => (
             <FadeIn key={cat.id}>
               <Link
-                href={`/shop?category=${cat.slug}`}
+                href={`/collections/${cat.slug}`}
                 className="group relative block aspect-[4/5] overflow-hidden border border-noire-border neon-border-hover"
               >
                 <Image

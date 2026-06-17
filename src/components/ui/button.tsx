@@ -2,7 +2,6 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { Spinner } from "@/components/ui/spinner";
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold uppercase tracking-wide transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-noire-black disabled:pointer-events-none disabled:opacity-50",
@@ -68,14 +67,25 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(
+          buttonVariants({ variant, size, className }),
+          loading && "relative overflow-hidden"
+        )}
         ref={ref}
         disabled={isDisabled}
         aria-busy={loading || undefined}
         {...props}
       >
-        {loading && <Spinner size="sm" />}
-        {children}
+        {loading ? (
+          <>
+            <span className="absolute inset-0 shimmer bg-noire-charcoal/90" aria-hidden />
+            <span className="relative inline-flex min-w-[4rem] items-center justify-center opacity-0">
+              {children}
+            </span>
+          </>
+        ) : (
+          children
+        )}
       </Comp>
     );
   }

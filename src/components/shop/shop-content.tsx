@@ -16,7 +16,13 @@ const QuickViewModal = dynamic(
   { ssr: false }
 );
 
-export function ShopContent() {
+interface ShopContentProps {
+  initialCategory?: string;
+  categoryName?: string;
+  categoryImage?: string;
+}
+
+export function ShopContent({ initialCategory, categoryName, categoryImage }: ShopContentProps = {}) {
   const searchParams = useSearchParams();
   const { products, loading: productsLoading, filter } = useProducts();
   const { categories, loading: categoriesLoading } = useCategories();
@@ -24,7 +30,7 @@ export function ShopContent() {
   const [page, setPage] = useState(1);
 
   const search = searchParams.get("search") || undefined;
-  const category = searchParams.get("category") || undefined;
+  const category = initialCategory || searchParams.get("category") || undefined;
   const filterParam = searchParams.get("filter");
   const sort = searchParams.get("sort") || "newest";
   const minPrice = searchParams.get("minPrice")
@@ -61,11 +67,17 @@ export function ShopContent() {
   return (
     <div className="page-enter mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-32">
       <div className="mb-12 text-center animate-fade-in">
+        {categoryImage && (
+          <div className="relative mx-auto mb-6 aspect-[21/9] max-w-3xl overflow-hidden border border-noire-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={categoryImage} alt={categoryName || ""} className="h-full w-full object-cover" />
+          </div>
+        )}
         <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent-cyan">
           explore the scene
         </p>
         <h1 className="font-display mt-3 text-3xl font-light tracking-wide sm:text-4xl md:text-5xl">
-          The Collection
+          {categoryName || "The Collection"}
         </h1>
         <p className="mt-3 text-sm text-noire-muted">
           {isLoading ? "Loading drip..." : `${result.total} ${result.total === 1 ? "piece" : "pieces"} — drip check passed`}

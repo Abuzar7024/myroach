@@ -95,6 +95,7 @@ export function PaymentContent() {
     try {
       const order = await createOrder({
         userId: user?.id,
+        customerEmail: checkoutShipping.email,
         items: items.map((item) => ({
           productId: item.productId,
           name: item.name,

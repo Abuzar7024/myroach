@@ -1,33 +1,50 @@
+"use client";
+
 import Link from "next/link";
+import Image from "next/image";
 import { Instagram, Facebook, Twitter } from "lucide-react";
-import { SITE_NAME, FOOTER_LINKS, SOCIAL } from "@/lib/constants";
+import { SITE_NAME, FOOTER_LINKS } from "@/lib/constants";
 import { FooterSizeGuide } from "@/components/layout/footer-size-guide";
+import { useSettings } from "@/hooks/use-settings";
 
 export function Footer() {
+  const { settings } = useSettings();
+  const storeName = settings.storeName || SITE_NAME;
+  const social = settings.socialLinks ?? {};
+
   return (
     <footer className="relative border-t border-accent-cyan/30 bg-noire-black text-noire-white">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <Link href="/" className="flex items-center gap-2 font-display text-3xl tracking-[0.1em]">
-              <span aria-hidden="true">🪳</span>
-              {SITE_NAME}
+              {settings.logo ? (
+                <Image src={settings.logo} alt={storeName} width={40} height={40} className="object-contain" />
+              ) : (
+                <span aria-hidden="true">🪳</span>
+              )}
+              {storeName}
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-noire-white/60">
-              Gen Z streetwear for the underground. Built like a roach, dressed like a menace.
-              Cyberpunk drip for the rotation — certified heat, bhai.
+              {settings.footerContent ||
+                "Gen Z streetwear for the underground. Built like a roach, dressed like a menace."}
             </p>
             <div className="mt-6 flex gap-4">
-              {[Instagram, Facebook, Twitter].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="text-noire-white/60 transition-colors hover:text-accent-cyan hover:drop-shadow-[0_0_6px_rgba(0,240,255,0.6)]"
-                  aria-label="Social link"
-                >
-                  <Icon className="h-4 w-4" />
+              {social.instagram && (
+                <a href={social.instagram} className="text-noire-white/60 transition-colors hover:text-accent-cyan" aria-label="Instagram">
+                  <Instagram className="h-4 w-4" />
                 </a>
-              ))}
+              )}
+              {social.facebook && (
+                <a href={social.facebook} className="text-noire-white/60 transition-colors hover:text-accent-cyan" aria-label="Facebook">
+                  <Facebook className="h-4 w-4" />
+                </a>
+              )}
+              {social.twitter && (
+                <a href={social.twitter} className="text-noire-white/60 transition-colors hover:text-accent-cyan" aria-label="Twitter">
+                  <Twitter className="h-4 w-4" />
+                </a>
+              )}
             </div>
           </div>
 
@@ -74,21 +91,22 @@ export function Footer() {
               Contact
             </h3>
             <address className="mt-4 space-y-2 text-sm not-italic text-noire-white/60">
-              <p>420 Roach Lane, Bandra</p>
-              <p>Mumbai, MH 400050</p>
-              <p>
-                <a href={`mailto:${SOCIAL.email}`} className="hover:text-accent-cyan">
-                  {SOCIAL.email}
-                </a>
-              </p>
-              <p>{SOCIAL.phone}</p>
+              {settings.address && <p>{settings.address}</p>}
+              {settings.contactEmail && (
+                <p>
+                  <a href={`mailto:${settings.contactEmail}`} className="hover:text-accent-cyan">
+                    {settings.contactEmail}
+                  </a>
+                </p>
+              )}
+              {settings.phone && <p>{settings.phone}</p>}
             </address>
           </div>
         </div>
 
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-accent-cyan/20 pt-8 sm:flex-row">
           <p className="text-xs text-noire-white/40">
-            © {new Date().getFullYear()} {SITE_NAME}. Youth certified. Still standing. 🪳
+            © {new Date().getFullYear()} {storeName}. Youth certified. Still standing. 🪳
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-xs text-noire-white/40 sm:gap-6">
             <Link href="/privacy" className="min-h-[44px] flex items-center hover:text-accent-cyan">Privacy</Link>

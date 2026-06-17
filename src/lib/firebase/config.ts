@@ -1,4 +1,5 @@
 import { initFirebaseAppCheck, setFirebaseAppCheckDebugToken } from "./app-check";
+import { isMockDataMode } from "@/lib/config";
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import {
   getAuth as getFirebaseAuth,
@@ -30,13 +31,7 @@ const firebaseConfig = {
 };
 
 /** MVP / local testing — skip Firestore, Auth network, and App Check. */
-export function isMockDataMode(): boolean {
-  const flag = process.env.NEXT_PUBLIC_USE_MOCK_DATA;
-  if (flag === "true") return true;
-  if (flag === "false") return false;
-  // Default to mock data in development when not explicitly disabled.
-  return process.env.NODE_ENV === "development";
-}
+export { isMockDataMode } from "@/lib/config";
 
 export const isFirebaseConfigured = Boolean(
   !isMockDataMode() &&

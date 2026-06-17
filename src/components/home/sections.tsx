@@ -3,8 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Product } from "@/types";
-import { ProductCard } from "@/components/shop/product-card";
+import { ProductCard, ProductCardSkeleton } from "@/components/shop/product-card";
 import { Button } from "@/components/ui/button";
+import { Shimmer } from "@/components/ui/shimmer";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,9 @@ import { FadeIn } from "@/components/ui/motion";
 import { testimonials, instagramPosts } from "@/data/mock-data";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
+import { toast } from "sonner";
+import { subscribeNewsletter } from "@/lib/firebase/services/product.service";
+import { isMockDataMode } from "@/lib/config";
 import { useState } from "react";
 
 interface ProductSectionProps {
@@ -25,67 +29,96 @@ interface ProductSectionProps {
   subtitle: string;
   products: Product[];
   viewAllHref: string;
+  loading?: boolean;
 }
 
-export function ProductSection({ title, subtitle, products, viewAllHref }: ProductSectionProps) {
+export function ProductSection({
+  title,
+  subtitle,
+  products,
+  viewAllHref,
+  loading = false,
+}: ProductSectionProps) {
+  const showSkeletons = loading && products.length === 0;
+
   return (
     <section className="py-16 lg:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="neon-divider mb-10" />
         <FadeIn className="mb-10 flex items-end justify-between">
           <div>
-            <span className="sticker sticker-lime mb-3">{subtitle}</span>
-            <h2 className="font-display mt-2 text-4xl tracking-wide md:text-5xl">
-              {title}
-            </h2>
+            {showSkeletons ? (
+              <>
+                <Shimmer className="mb-3 h-6 w-28 bg-noire-charcoal" />
+                <Shimmer className="h-10 w-48 bg-noire-charcoal md:w-64" />
+              </>
+            ) : (
+              <>
+                <span className="sticker sticker-lime mb-3">{subtitle}</span>
+                <h2 className="font-display mt-2 text-4xl tracking-wide md:text-5xl">{title}</h2>
+              </>
+            )}
           </div>
-          <Button asChild variant="ghost" className="hidden sm:flex">
-            <Link href={viewAllHref}>
-              View All <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+          {showSkeletons ? (
+            <Shimmer className="hidden h-11 w-28 bg-noire-charcoal sm:block" />
+          ) : (
+            <Button asChild variant="ghost" className="hidden sm:flex">
+              <Link href={viewAllHref}>
+                View All <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          )}
         </FadeIn>
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
-          {products.slice(0, 4).map((product, i) => (
-            <ProductCard key={product.id} product={product} priority={i < 2} />
-          ))}
+          {showSkeletons
+            ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)
+            : products.slice(0, 4).map((product, i) => (
+                <ProductCard key={product.id} product={product} priority={i < 2} />
+              ))}
         </div>
+        {!showSkeletons && products.length === 0 && !loading && (
+          <p className="py-12 text-center text-sm text-noire-muted">
+            No products yet — add them in the admin panel.
+          </p>
+        )}
         <div className="mt-8 text-center sm:hidden">
-          <Button asChild variant="outline">
-            <Link href={viewAllHref}>View All</Link>
-          </Button>
+          {showSkeletons ? (
+            <Shimmer className="mx-auto h-11 w-full max-w-xs bg-noire-charcoal" />
+          ) : (
+            <Button asChild variant="outline">
+              <Link href={viewAllHref}>View All</Link>
+            </Button>
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-export function PromoBanner() {
+export function PromoBanner({
+  title,
+  subtitle,
+  freeShippingThreshold = FREE_SHIPPING_THRESHOLD,
+}: {
+  title?: string;
+  subtitle?: string;
+  freeShippingThreshold?: number;
+}) {
   return (
     <section className="relative overflow-hidden">
       <div className="grid lg:grid-cols-2">
         <FadeIn className="flex flex-col justify-center bg-noire-charcoal px-8 py-20 text-noire-white lg:px-16">
           <span className="sticker sticker-pink mb-4 w-fit">neon certified deal</span>
           <h2 className="font-display text-4xl tracking-wide md:text-5xl lg:text-6xl">
-            FREE SHIP OVER {formatPrice(FREE_SHIPPING_THRESHOLD)}
+            {title || `FREE SHIP OVER ${formatPrice(freeShippingThreshold)}`}
           </h2>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-noire-white/70">
-            Stack your cart, skip the shipping fee. More drip for your bread — the rotation
-            got you, bhai.
+            {subtitle ||
+              "Stack your cart, skip the shipping fee. More drip for your bread — the rotation got you, bhai."}
           </p>
           <Button asChild variant="drip" className="mt-8 w-fit">
             <Link href="/shop">Full Send → Shop</Link>
           </Button>
-        </FadeIn>
-        <FadeIn className="relative aspect-square lg:aspect-auto lg:min-h-[400px]">
-          <Image
-            src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=1200&q=75"
-            alt="MY ROACH streetwear promo"
-            fill
-            className="object-cover"
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            loading="lazy"
-          />
         </FadeIn>
       </div>
     </section>
@@ -201,6 +234,24 @@ export function InstagramGallery() {
 
 export function Newsletter() {
   const [successOpen, setSuccessOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      if (!isMockDataMode()) {
+        await subscribeNewsletter(email);
+      }
+      setSuccessOpen(true);
+      setEmail("");
+    } catch {
+      toast.error("Could not subscribe — try again, bhai");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -214,23 +265,20 @@ export function Newsletter() {
           <p className="mt-3 text-sm text-noire-muted">
             Early drops, secret sales, and fit inspo straight to your inbox. No spam — just heat, bhai.
           </p>
-          <form
-            className="mt-8 flex flex-col gap-3 sm:flex-row"
-            onSubmit={(e) => {
-              e.preventDefault();
-              setSuccessOpen(true);
-            }}
-          >
+          <form className="mt-8 flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
             <input
               type="email"
               placeholder="your@email.com"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="flex-1 border border-accent-cyan/40 bg-noire-charcoal px-4 py-3 text-sm text-noire-white placeholder:text-noire-muted focus:outline-none focus:border-accent-cyan focus:shadow-[0_0_12px_rgba(0,240,255,0.25)]"
               aria-label="Email address"
             />
             <button
               type="submit"
-              className="border border-accent-pink bg-accent-pink px-8 py-3 text-xs font-bold uppercase tracking-widest text-noire-white transition-[background-color,box-shadow] duration-200 hover:bg-accent-cyan hover:border-accent-cyan hover:text-noire-black hover:shadow-[0_0_12px_rgba(0,240,255,0.35)]"
+              disabled={submitting}
+              className="border border-accent-pink bg-accent-pink px-8 py-3 text-xs font-bold uppercase tracking-widest text-noire-white transition-[background-color,box-shadow] duration-200 hover:bg-accent-cyan hover:border-accent-cyan hover:text-noire-black hover:shadow-[0_0_12px_rgba(0,240,255,0.35)] disabled:opacity-50"
             >
               I&apos;m In
             </button>

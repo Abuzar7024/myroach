@@ -10,10 +10,14 @@ import {
 import {
   onAuthStateChanged,
   signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   type User as FirebaseUser,
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth, getFirestore, isFirebaseConfigured } from "@/lib/firebase/config";
+import { mapUser } from "@/lib/firebase/mappers";
+import { isMockDataMode } from "@/lib/config";
 import {
   isRecoverableFirestoreError,
   markFirestoreUnavailable,
@@ -47,6 +51,8 @@ interface AuthContextType {
     otp: string,
     options?: { forRegistration?: boolean }
   ) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
   completeTestRegistration: (name: string, address: RegistrationAddress) => Promise<void>;
   updateUserProfile: (data: Partial<User>) => Promise<void>;
   isConfigured: boolean;
@@ -155,16 +161,25 @@ async function upsertUserDoc(
     const now = new Date().toISOString();
 
     if (userDoc.exists()) {
+      const mapped = mapUser(fbUser.uid, userDoc.data() as Record<string, unknown>);
       await setDoc(
         ref,
-        { ...extra, phone: fbUser.phoneNumber || extra?.phone, updatedAt: now },
+        { phone: fbUser.phoneNumber || extra?.phone, updatedAt: now },
         { merge: true }
       );
-      return { id: fbUser.uid, ...userDoc.data(), ...extra } as User;
+      return { ...mapped, ...extra };
     }
 
     const newUser = buildLocalUser(fbUser, extra);
-    await setDoc(ref, newUser);
+    await setDoc(ref, {
+      name: newUser.displayName,
+      email: newUser.email,
+      role: "customer",
+      active: true,
+      addresses: newUser.addresses,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
     return newUser;
   } catch (error) {
     if (isRecoverableFirestoreError(error)) {
@@ -197,10 +212,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [pendingRegistration, setPendingRegistration] = useState(false);
 
   useEffect(() => {
+    if (!isMockDataMode()) return;
     const saved = loadTestSession();
-    if (saved) {
-      setUser(saved);
-    }
+    if (saved) setUser(saved);
     setLoading(false);
   }, []);
 
@@ -219,7 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (hasTestSession()) {
+      if (hasTestSession() && isMockDataMode()) {
         setLoading(false);
         return;
       }
@@ -230,7 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (shouldAttemptFirestore()) {
             const userDoc = await getDoc(doc(db, "users", fbUser.uid));
             if (userDoc.exists()) {
-              setUser({ id: fbUser.uid, ...userDoc.data() } as User);
+              setUser(mapUser(fbUser.uid, userDoc.data() as Record<string, unknown>));
               setLoading(false);
               return;
             }
@@ -261,11 +275,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearTestSession();
   };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    const auth = getAuth();
+    if (!auth) throw new Error("Firebase Auth is not configured");
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const signUpWithEmail = async (email: string, password: string, name: string) => {
+    const auth = getAuth();
+    const db = getFirestore();
+    if (!auth || !db) throw new Error("Firebase is not configured");
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await setDoc(doc(db, "users", cred.user.uid), {
+      name,
+      email,
+      role: "customer",
+      active: true,
+      addresses: [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  };
+
   const signInWithTestCredentials = async (
     phone: string,
     otp: string,
     options?: { forRegistration?: boolean }
   ) => {
+    if (!isMockDataMode()) {
+      throw new Error("Phone test login is disabled. Use email and password.");
+    }
     assertTestCredentials(phone, otp);
     normalizePhoneDigits(phone);
 
@@ -304,7 +343,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const updated = { ...user, ...data, updatedAt: new Date().toISOString() };
     if (db && shouldAttemptFirestore()) {
       try {
-        await setDoc(doc(db, "users", user.id), updated, { merge: true });
+        await setDoc(
+          doc(db, "users", user.id),
+          {
+            name: updated.displayName,
+            email: updated.email,
+            phone: updated.phone,
+            addresses: updated.addresses,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
       } catch (error) {
         if (isRecoverableFirestoreError(error)) {
           markFirestoreUnavailable();
@@ -326,6 +375,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: user?.role === "admin",
         logout,
         signInWithTestCredentials,
+        signInWithEmail,
+        signUpWithEmail,
         completeTestRegistration,
         updateUserProfile,
         isConfigured: isFirebaseConfigured,

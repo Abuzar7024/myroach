@@ -47,4 +47,11 @@ export const COLLECTIONS = {
   COUPONS: "coupons",
   BANNERS: "banners",
   REVIEWS: "reviews",
+  SUBSCRIBERS: "subscribers",
+  SETTINGS: "settings",
+} as const;
+
+export const SETTINGS_DOCS = {
+  GENERAL: "general",
+  HOMEPAGE: "homepage",
 } as const;

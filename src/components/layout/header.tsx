@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Menu, X, Search, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { useSettings } from "@/hooks/use-settings";
 import { SITE_NAME, NAV_LINKS } from "@/lib/constants";
+import { PLACEHOLDER_PRODUCT_IMAGE } from "@/lib/config";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -32,6 +34,8 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { user, logout } = useAuth();
+  const { settings } = useSettings();
+  const storeName = settings.storeName || SITE_NAME;
 
   useEffect(() => {
     let ticking = false;
@@ -107,11 +111,15 @@ export function Header() {
             href="/"
             className="flex items-center justify-center gap-1.5 sm:gap-2 lg:absolute lg:left-1/2 lg:-translate-x-1/2"
           >
-            <span className="text-base sm:text-lg" aria-hidden="true">
-              🪳
-            </span>
+            {settings.logo ? (
+              <img src={settings.logo} alt={storeName} className="h-8 w-auto object-contain sm:h-10" />
+            ) : (
+              <span className="text-base sm:text-lg" aria-hidden="true">
+                🪳
+              </span>
+            )}
             <span className="font-display text-base tracking-[0.12em] text-noire-white sm:text-xl lg:text-3xl">
-              {SITE_NAME}
+              {storeName}
             </span>
           </Link>
 
@@ -157,7 +165,7 @@ export function Header() {
             >
               <div className="mb-8 flex items-center justify-between">
                 <span className="font-display text-lg tracking-[0.1em] sm:text-xl">
-                  {SITE_NAME}
+                  {storeName}
                 </span>
                 <button
                   type="button"

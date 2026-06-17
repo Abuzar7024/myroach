@@ -10,12 +10,14 @@ import {
   markFirestoreUnavailable,
   shouldAttemptFirestore,
 } from "@/lib/firebase/firestore-utils";
+import { createOrderInFirestore } from "@/lib/firebase/services/product.service";
 import { generateOrderNumber } from "@/lib/utils";
 
 const ORDERS_STORAGE_KEY = "myroach-orders";
 
 interface CreateOrderInput {
   userId?: string;
+  customerEmail?: string;
   items: Order["items"];
   subtotal: number;
   shipping: number;
@@ -100,7 +102,42 @@ export const useOrderStore = create<OrderStore>()(
         set({ orders });
 
         try {
-          await saveOrderToFirestore(order);
+          if (shouldAttemptFirestore() && order.userId) {
+            await createOrderInFirestore({
+              id: order.id,
+              userId: order.userId,
+              customerName: order.shippingAddress.fullName,
+              customerEmail: input.customerEmail || "",
+              items: order.items.map((i) => ({
+                productId: i.productId,
+                title: i.name,
+                quantity: i.quantity,
+                price: i.price,
+                image: i.image,
+              })),
+              subtotal: order.subtotal,
+              tax: 0,
+              shippingCharge: order.shipping,
+              discount: order.discount,
+              total: order.total,
+              status: "pending",
+              paymentStatus: "paid",
+              shippingAddress: {
+                name: order.shippingAddress.fullName,
+                email: "",
+                phone: "",
+                address: order.shippingAddress.street,
+                city: order.shippingAddress.city,
+                state: order.shippingAddress.state,
+                zip: order.shippingAddress.postalCode,
+                country: order.shippingAddress.country || "IN",
+              },
+              couponCode: order.couponCode,
+              paymentMethod: order.paymentMethod,
+            });
+          } else {
+            await saveOrderToFirestore(order);
+          }
         } catch {
           // Firestore sync is best-effort; localStorage remains source of truth offline
         }
