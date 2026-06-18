@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useProduct, useProducts } from "@/hooks/use-products";
+import { useProductReviews } from "@/hooks/use-coupons";
 import { ProductDetails } from "@/components/product/product-details";
 import { Button } from "@/components/ui/button";
 import ProductLoading from "./loading";
@@ -15,6 +16,7 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
   const decodedSlug = decodeURIComponent(slug);
   const { product, loading } = useProduct(decodedSlug);
   const { products, loading: catalogLoading } = useProducts();
+  const { reviews } = useProductReviews(product?.id ?? "");
 
   const relatedProducts = useMemo(() => {
     if (!product) return [];
@@ -45,7 +47,7 @@ export function ProductPageClient({ slug }: ProductPageClientProps) {
     <ProductDetails
       product={product}
       relatedProducts={relatedProducts}
-      reviews={[]}
+      reviews={reviews}
     />
   );
 }

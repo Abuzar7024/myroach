@@ -23,11 +23,18 @@ export interface StoreSettings {
   taxPercentage?: number;
 }
 
+export interface FeaturedCollectionSchedule {
+  categoryId: string;
+  startDate: string;
+  endDate: string;
+}
+
 export interface HomepageSettings {
   showFeatured?: boolean;
   showFeaturedProducts?: boolean;
   featuredRotateSeconds?: number;
   featuredCollectionIds?: string[];
+  featuredCollectionSchedules?: FeaturedCollectionSchedule[];
   showBestSellers?: boolean;
   bestSellerIds?: string[];
   showNewArrivals?: boolean;

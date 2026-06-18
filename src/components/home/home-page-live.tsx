@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { resolveActiveFeaturedCollectionIds } from "@/lib/featured-collection-schedule";
 import { SplitScreenHero } from "@/components/home/split-screen-hero";
 import { FeaturedCollections } from "@/components/home/hero-section";
 import { FeaturedProducts } from "@/components/home/featured-products";
@@ -52,13 +53,17 @@ export function HomePageLive() {
   }, [products, homepage.bestSellerIds]);
 
   const featuredCategories = useMemo(() => {
-    if (homepage.featuredCollectionIds?.length) {
+    const activeIds = resolveActiveFeaturedCollectionIds(
+      homepage.featuredCollectionSchedules,
+      homepage.featuredCollectionIds
+    );
+    if (activeIds.length) {
       const byId = new Map(categories.map((c) => [c.id, c]));
-      const picked = homepage.featuredCollectionIds.map((id) => byId.get(id)).filter(Boolean);
+      const picked = activeIds.map((id) => byId.get(id)).filter(Boolean);
       if (picked.length) return picked as typeof categories;
     }
     return categories;
-  }, [categories, homepage.featuredCollectionIds]);
+  }, [categories, homepage.featuredCollectionIds, homepage.featuredCollectionSchedules]);
 
   const heroProducts = useMemo(
     () => products.filter((p) => p.isFeatured && p.images[0]).slice(0, 4),
@@ -106,8 +111,8 @@ export function HomePageLive() {
         viewAllHref="/shop?sort=newest"
         loading={productsLoading}
         limit={8}
-        emptyTitle="First drop loading"
-        emptySubtitle="The roach is in the lab cooking fits. Latest heat posts here the second admin hits publish — W in chat soon, bhai."
+        emptyTitle="New products coming soon"
+        emptySubtitle="We are adding new items. Check back soon or browse the shop."
       />
 
       {homepage.showNewArrivals !== false && (
@@ -117,8 +122,8 @@ export function HomePageLive() {
           products={newArrivals}
           viewAllHref="/shop?filter=new"
           loading={productsLoading}
-          emptyTitle="New arrivals incoming"
-          emptySubtitle="Nothing tagged fresh yet — but the underground never sleeps. New fits drop without warning, stay locked in."
+          emptyTitle="New arrivals coming soon"
+          emptySubtitle="New items will show here when they are added in the admin panel."
         />
       )}
 
@@ -137,8 +142,8 @@ export function HomePageLive() {
           products={bestSellers}
           viewAllHref="/shop?sort=popular"
           loading={productsLoading}
-          emptyTitle="Best sellers TBD"
-          emptySubtitle="Nobody's copped yet 'cause the rotation's still loading. Be the first to full send when heat lands."
+          emptyTitle="Best sellers coming soon"
+          emptySubtitle="Top picks will appear here once orders start coming in."
         />
       )}
 

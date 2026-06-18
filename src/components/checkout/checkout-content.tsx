@@ -15,7 +15,7 @@ import { BottomIsland } from "@/components/ui/bottom-island";
 import { useCartStore } from "@/store/cart-store";
 import { useAuth } from "@/contexts/auth-context";
 import { formatPrice } from "@/lib/format";
-import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
+import { useSettings } from "@/hooks/use-settings";
 import {
   buildCheckoutDefaults,
   buildProfileFromCheckout,
@@ -48,6 +48,7 @@ function SummaryLines({
   couponCode,
   shipping,
   total,
+  freeShippingThreshold,
 }: {
   items: ReturnType<typeof useCartStore.getState>["items"];
   subtotal: number;
@@ -55,6 +56,7 @@ function SummaryLines({
   couponCode: string | null;
   shipping: number;
   total: number;
+  freeShippingThreshold: number;
 }) {
   return (
     <>
@@ -83,9 +85,9 @@ function SummaryLines({
           <span className="text-noire-muted">Shipping</span>
           <span>{shipping === 0 ? "FREE" : formatPrice(shipping)}</span>
         </div>
-        {subtotal < FREE_SHIPPING_THRESHOLD && (
+        {subtotal < freeShippingThreshold && (
           <p className="text-xs text-noire-muted">
-            Free shipping on orders over {formatPrice(FREE_SHIPPING_THRESHOLD)}
+            Free shipping on orders over {formatPrice(freeShippingThreshold)}
           </p>
         )}
         <div className="flex justify-between pt-2 text-base font-medium">
@@ -100,6 +102,8 @@ function SummaryLines({
 export function CheckoutContent() {
   const router = useRouter();
   const { user, updateUserProfile } = useAuth();
+  const { settings } = useSettings();
+  const freeShippingThreshold = settings.freeShippingThreshold ?? 2499;
   const {
     items,
     getSubtotal,
@@ -167,7 +171,15 @@ export function CheckoutContent() {
     }
   };
 
-  const summaryProps = { items, subtotal, discount, couponCode, shipping, total };
+  const summaryProps = {
+    items,
+    subtotal,
+    discount,
+    couponCode,
+    shipping,
+    total,
+    freeShippingThreshold,
+  };
 
   return (
     <>

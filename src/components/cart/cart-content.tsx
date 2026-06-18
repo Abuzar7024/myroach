@@ -22,7 +22,8 @@ import { formatPrice } from "@/lib/format";
 import { loginRedirectPath, storeReturnUrl } from "@/lib/auth-utils";
 import { validateCoupon } from "@/lib/coupons";
 import { useCoupons } from "@/hooks/use-coupons";
-import { FREE_SHIPPING_THRESHOLD, DEFAULT_RETURN_POLICY } from "@/lib/constants";
+import { useSettings } from "@/hooks/use-settings";
+import { DEFAULT_RETURN_POLICY } from "@/lib/constants";
 import { toast } from "sonner";
 
 type PendingRemove = {
@@ -38,6 +39,8 @@ function variantLabel(size: string, color: string) {
 }
 
 export function CartContent() {
+  const { settings } = useSettings();
+  const freeShippingThreshold = settings.freeShippingThreshold ?? 2499;
   const router = useRouter();
   const { user } = useAuth();
   const {
@@ -210,9 +213,9 @@ export function CartContent() {
               <span className="text-noire-muted">Shipping</span>
               <span>{shipping === 0 ? "FREE" : formatPrice(shipping)}</span>
             </div>
-            {subtotal < FREE_SHIPPING_THRESHOLD && (
+            {subtotal < freeShippingThreshold && (
               <p className="text-xs text-noire-muted">
-                Add {formatPrice(FREE_SHIPPING_THRESHOLD - subtotal)} more for free shipping
+                Add {formatPrice(freeShippingThreshold - subtotal)} more for free shipping
               </p>
             )}
           </div>

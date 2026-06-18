@@ -26,19 +26,19 @@ const contactSchema = z.object({
 const faqs = [
   {
     q: "What is your return policy?",
-    a: "We offer complimentary returns within 30 days of delivery. Items must be unworn with original tags attached.",
+    a: "Returns are accepted for unused items with tags attached. See Shipping & Returns for full details.",
   },
   {
     q: "How long does shipping take?",
-    a: "Standard shipping takes 5-7 business days. Express options are available at checkout.",
+    a: "Standard shipping usually takes 5–7 business days. Express options may be available at checkout.",
   },
   {
-    q: "Do you ship internationally?",
-    a: "Yes, we ship to over 40 countries worldwide. Duties and taxes may apply depending on your location.",
+    q: "Do you ship across India?",
+    a: "Yes. We deliver across India. Shipping cost and free-shipping offers are shown at checkout.",
   },
   {
     q: "How can I track my order?",
-    a: "Once shipped, you'll receive a tracking number via email. You can also view order status in your account.",
+    a: "Open My Account → Orders to see status and tracking once your order ships.",
   },
 ];
 

@@ -47,8 +47,7 @@ export function WelcomeDialog() {
             WELCOME TO MY ROACH
           </DialogTitle>
           <DialogDescription className="text-center text-sm leading-relaxed text-noire-muted">
-            Gen Z streetwear for the underground. Built like a roach, dressed like a menace.
-            Neon certified drip — they can&apos;t spray us out the scene. Full send only, bhai.
+            Welcome to MY ROACH. Shop streetwear with bold colors and clean fits.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col gap-2 sm:flex-col">
@@ -56,7 +55,7 @@ export function WelcomeDialog() {
             <Link href="/shop">Shop the Drop</Link>
           </Button>
           <Button variant="outline" size="lg" className="w-full" onClick={dismiss}>
-            I&apos;m Already in the Rotation
+            I&apos;m good for now
           </Button>
         </DialogFooter>
       </DialogContent>

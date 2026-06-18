@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { CartItem } from "@/types";
-import { FREE_SHIPPING_THRESHOLD, SHIPPING_RATES } from "@/lib/constants";
+import { getDefaultShippingCharge, getFreeShippingThreshold } from "@/lib/pricing-settings";
 
 export interface CheckoutShipping {
   firstName: string;
@@ -134,8 +134,13 @@ export const useCartStore = create<CartStore>()(
 
       getShippingCost: () => {
         const subtotal = get().getSubtotal();
-        if (subtotal >= FREE_SHIPPING_THRESHOLD) return 0;
-        return SHIPPING_RATES[0].price;
+        if (subtotal >= getFreeShippingThreshold()) return 0;
+        const options = get().shippingOptions;
+        if (options?.length) {
+          const selected = options.find((o) => o.id === get().shippingId);
+          if (selected) return selected.price;
+        }
+        return getDefaultShippingCharge();
       },
 
       getTotal: (shipping) => {

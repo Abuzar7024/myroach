@@ -2,52 +2,52 @@
 
 export const FALLBACK_HERO = {
   image: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1600&q=75",
-  title: "DROP LOADING…",
-  headline: "THE ROTATION\nIS COOKING",
-  subtitle: "First heat hits soon, bhai. Underground drip under neon — they tried to cancel us, we just got fresher. No cap. 🪳",
+  title: "New collection",
+  headline: "NEW DROP\nCOMING SOON",
+  subtitle: "Fresh styles are on the way. Browse the shop or check back soon.",
   link: "/shop",
 } as const;
 
 export const FALLBACK_HERO_SLIDES = [
   {
     image: FALLBACK_HERO.image,
-    tagline: "main character verified",
-    headline: "THE ROTATION\nIS COOKING",
+    tagline: "new season",
+    headline: "NEW DROP\nCOMING SOON",
     subline: FALLBACK_HERO.subtitle,
   },
   {
     image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=1600&q=75",
-    tagline: "neon certified",
-    headline: "THEY CAN'T SPRAY US\nOUT THE SCENE",
-    subline: "Underground drip under city lights. Unbothered. Absurdist humor meets cyber streetwear — bhai, the scene is here.",
+    tagline: "streetwear",
+    headline: "BOLD FITS\nFOR EVERY DAY",
+    subline: "Hoodies, tees, and accessories with a neon edge.",
   },
   {
     image: "https://images.unsplash.com/photo-1618354691373-d8512795e3fb?w=1600&q=75",
-    tagline: "youth certified",
-    headline: "SURVIVED THE PLOT\nSTILL STANDING",
-    subline: "MY ROACH drops for the rotation. Baggy cargos, neon accents, attitude included. Lowkey the main event.",
+    tagline: "my roach",
+    headline: "BUILT TO\nSTAND OUT",
+    subline: "Shop the latest MY ROACH collection online.",
   },
 ] as const;
 
 export const FALLBACK_CATEGORY_TILES = [
   {
     name: "Hoodies",
-    tagline: "oversized energy",
+    tagline: "cozy layers",
     image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=800&q=75",
   },
   {
     name: "Tees",
-    tagline: "graphic heat",
+    tagline: "everyday fits",
     image: "https://images.unsplash.com/photo-1576566580240-369036f3d3a5?w=800&q=75",
   },
   {
     name: "Cargos",
-    tagline: "baggy certified",
+    tagline: "utility style",
     image: "https://images.unsplash.com/photo-1622445265476-086dbcf69797?w=800&q=75",
   },
   {
     name: "Accessories",
-    tagline: "finish the fit",
+    tagline: "finish the look",
     image: "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=800&q=75",
   },
 ] as const;

@@ -50,8 +50,8 @@ export function FeaturedCollections({ categories, loading = false }: FeaturedCol
       <section className="py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <ComingSoonBlock
-            title="Collections cooking"
-            subtitle="Categories haven't dropped yet. The admin squad is curating the rotation — hoodies, tees, and certified chaos incoming."
+            title="Collections coming soon"
+            subtitle="Categories will show here when you add them in the admin panel."
             ctaLabel="Browse shop"
           />
         </div>

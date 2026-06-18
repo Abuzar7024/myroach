@@ -1,9 +1,9 @@
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "MY ROACH";
 export const SITE_NAME_DISPLAY = "MY ROACH";
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-export const SITE_TAGLINE = "Built different — certified heat only";
+export const SITE_TAGLINE = "Streetwear that stands out";
 export const SITE_DESCRIPTION =
-  "MY ROACH — Gen Z streetwear for the underground. Squad up, survived the plot, still standing. They tried to cancel us — we just got fresher. Full send drip, no cap.";
+  "MY ROACH — bold streetwear with neon accents. Shop hoodies, tees, and accessories online.";
 
 export const SOCIAL = {
   instagram: "@myroach.fit",
@@ -13,28 +13,28 @@ export const SOCIAL = {
 
 export const NAV_LINKS = [
   { href: "/shop", label: "Shop" },
-  { href: "/shop?filter=new", label: "Fresh Drops" },
+  { href: "/shop?filter=new", label: "New In" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ] as const;
 
 export const FOOTER_LINKS = {
   shop: [
-    { href: "/shop", label: "All Fits" },
+    { href: "/shop", label: "All Products" },
     { href: "/shop?category=hoodies", label: "Hoodies" },
     { href: "/shop?category=tees", label: "Tees" },
     { href: "/shop?category=accessories", label: "Accessories" },
     { href: "/size-guide", label: "Size Guide" },
   ],
   company: [
-    { href: "/about", label: "The Lore" },
-    { href: "/contact", label: "Hit Us Up" },
+    { href: "/about", label: "About Us" },
+    { href: "/contact", label: "Contact" },
     { href: "/contact#faq", label: "FAQ" },
     { href: "/shipping-returns", label: "Shipping & Returns" },
   ],
   account: [
     { href: "/account", label: "My Account" },
-    { href: "/account/orders", label: "Order History" },
+    { href: "/account/orders", label: "Orders" },
     { href: "/account/wishlist", label: "Wishlist" },
     { href: "/account/addresses", label: "Addresses" },
   ],
@@ -56,7 +56,7 @@ export const SHIPPING_RATES = [
   { id: "overnight", label: "Overnight", price: 399, days: "Next business day" },
 ] as const;
 
-export const DEFAULT_RETURN_POLICY = "10 days easy return";
+export const DEFAULT_RETURN_POLICY = "Easy returns within the policy window shown at checkout";
 export const DEFAULT_MIN_ORDER_QTY = 1;
 export const DEFAULT_MAX_ORDER_QTY = 10;
 

@@ -45,7 +45,7 @@ export function ProductSection({
   loading = false,
   limit = 4,
   emptyTitle = "Drop loading…",
-  emptySubtitle = "Nothing in the rotation yet — admin's stacking heat as we speak. Pull up later for the full send, no cap.",
+  emptySubtitle = "Nothing here yet. New products will show when added in the admin panel.",
 }: ProductSectionProps) {
   const showSkeletons = loading && products.length === 0;
   const visible = products.slice(0, limit);

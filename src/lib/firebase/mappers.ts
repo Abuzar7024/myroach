@@ -274,6 +274,9 @@ export function mapHomepageSettings(raw: RawDoc): HomepageSettings {
     featuredCollectionIds: Array.isArray(raw.featuredCollectionIds)
       ? (raw.featuredCollectionIds as string[])
       : [],
+    featuredCollectionSchedules: Array.isArray(raw.featuredCollectionSchedules)
+      ? (raw.featuredCollectionSchedules as HomepageSettings["featuredCollectionSchedules"])
+      : [],
     showBestSellers: bool(raw.showBestSellers, true),
     bestSellerIds: Array.isArray(raw.bestSellerIds) ? (raw.bestSellerIds as string[]) : [],
     showNewArrivals: bool(raw.showNewArrivals, true),

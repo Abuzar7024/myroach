@@ -176,7 +176,15 @@ export async function createOrderInFirestore(order: {
   customerName: string;
   customerEmail: string;
   customerPhone?: string;
-  items: { productId: string; title: string; quantity: number; price: number; image: string }[];
+  items: {
+    productId: string;
+    title: string;
+    quantity: number;
+    price: number;
+    image: string;
+    size?: string;
+    color?: string;
+  }[];
   subtotal: number;
   tax: number;
   shippingCharge: number;

@@ -19,9 +19,12 @@ function chunk<T>(items: T[], size: number): T[][] {
 }
 
 function slideDurationMs(products: Product[], fallbackSeconds: number): number {
-  const seconds = products.map((p) => p.featuredDisplaySeconds ?? fallbackSeconds);
-  const max = Math.max(...seconds, fallbackSeconds);
-  return Math.max(3, max) * 1000;
+  const cappedFallback = Math.min(40, Math.max(3, fallbackSeconds));
+  const seconds = products.map((p) =>
+    Math.min(40, Math.max(3, p.featuredDisplaySeconds ?? cappedFallback))
+  );
+  const max = Math.max(...seconds, cappedFallback);
+  return max * 1000;
 }
 
 interface FeaturedProductsProps {

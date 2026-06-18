@@ -11,10 +11,10 @@ interface ComingSoonBlockProps {
 
 export function ComingSoonBlock({
   title = "Heat incoming",
-  subtitle = "Admin's plotting the next drop. The roach survives every plot twist — check back soon, full send energy loading…",
+  subtitle = "New items will appear here soon. Check back or browse the shop.",
   emoji = "🪳",
   ctaHref = "/shop",
-  ctaLabel = "Peep the shop anyway",
+  ctaLabel = "Browse shop",
 }: ComingSoonBlockProps) {
   return (
     <div className="cyber-card flex flex-col items-center justify-center border border-dashed border-accent-cyan/35 px-6 py-14 text-center sm:px-10 sm:py-16">
@@ -25,7 +25,7 @@ export function ComingSoonBlock({
       <h3 className="font-display mt-5 text-2xl tracking-wide sm:text-3xl">{title}</h3>
       <p className="mt-3 max-w-lg text-sm leading-relaxed text-noire-muted">{subtitle}</p>
       <p className="mt-2 text-xs uppercase tracking-[0.2em] text-accent-cyan/80">
-        lowkey the wait is part of the lore
+        updated from the admin panel
       </p>
       {ctaHref && (
         <Button asChild variant="cyber" className="mt-8">
