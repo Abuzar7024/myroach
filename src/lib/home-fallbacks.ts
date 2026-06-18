@@ -8,6 +8,27 @@ export const FALLBACK_HERO = {
   link: "/shop",
 } as const;
 
+export const FALLBACK_HERO_SLIDES = [
+  {
+    image: FALLBACK_HERO.image,
+    tagline: "main character verified",
+    headline: "THE ROTATION\nIS COOKING",
+    subline: FALLBACK_HERO.subtitle,
+  },
+  {
+    image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=1600&q=75",
+    tagline: "neon certified",
+    headline: "THEY CAN'T SPRAY US\nOUT THE SCENE",
+    subline: "Underground drip under city lights. Unbothered. Absurdist humor meets cyber streetwear — bhai, the scene is here.",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1618354691373-d8512795e3fb?w=1600&q=75",
+    tagline: "youth certified",
+    headline: "SURVIVED THE PLOT\nSTILL STANDING",
+    subline: "MY ROACH drops for the rotation. Baggy cargos, neon accents, attitude included. Lowkey the main event.",
+  },
+] as const;
+
 export const FALLBACK_CATEGORY_TILES = [
   {
     name: "Hoodies",

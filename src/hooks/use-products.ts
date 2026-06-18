@@ -47,9 +47,16 @@ export function useProduct(slug: string) {
 
   useEffect(() => {
     if (!slug) return;
+    const normalized = decodeURIComponent(slug).trim().toLowerCase();
+
     if (isMockDataMode()) {
       import("@/data/mock-data").then(({ products }) => {
-        setProduct(products.find((p) => p.slug === slug) ?? null);
+        setProduct(
+          products.find(
+            (p) =>
+              p.slug.toLowerCase() === normalized || p.id.toLowerCase() === normalized
+          ) ?? null
+        );
         setLoading(false);
       });
       return;

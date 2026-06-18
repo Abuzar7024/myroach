@@ -12,9 +12,14 @@ const defaultStoreSettings: StoreSettings = {
 
 const defaultHomepageSettings: HomepageSettings = {
   showFeatured: true,
+  showFeaturedProducts: true,
+  featuredRotateSeconds: 5,
   showBestSellers: true,
   showNewArrivals: true,
   showPromo: true,
+  showShopTeaser: true,
+  showBrandStory: true,
+  showNewsletter: true,
 };
 
 export function subscribeStoreSettings(

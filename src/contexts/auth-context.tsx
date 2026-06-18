@@ -12,7 +12,11 @@ import {
   signOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendEmailVerification,
+  setPersistence,
+  browserSessionPersistence,
   type User as FirebaseUser,
+  type Auth,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth, getFirestore, isFirebaseConfigured } from "@/lib/firebase/config";
@@ -45,14 +49,20 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   isAdmin: boolean;
+  needsEmailVerification: boolean;
+  pendingDisplayName: string | null;
+  showWelcomeSplash: boolean;
   logout: () => Promise<void>;
   signInWithTestCredentials: (
     phone: string,
     otp: string,
     options?: { forRegistration?: boolean }
   ) => Promise<void>;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<{ needsVerification: boolean }>;
+  signUpWithEmail: (email: string, password: string, name: string) => Promise<{ needsVerification: boolean }>;
+  sendVerificationEmail: () => Promise<void>;
+  checkEmailVerified: () => Promise<boolean>;
+  dismissWelcomeSplash: () => void;
   completeTestRegistration: (name: string, address: RegistrationAddress) => Promise<void>;
   updateUserProfile: (data: Partial<User>) => Promise<void>;
   isConfigured: boolean;
@@ -62,6 +72,42 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TEST_USER_ID = "test-user-8770206120";
 const TEST_AUTH_KEY = "myroach-test-auth";
+/** Customer storefront only — Firebase persistence is ignored until user signs in here. */
+const STOREFRONT_AUTH_KEY = "myroach-storefront-auth";
+
+function markStorefrontSession(uid: string) {
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem(STOREFRONT_AUTH_KEY, uid);
+  }
+}
+
+function clearStorefrontSession() {
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem(STOREFRONT_AUTH_KEY);
+  }
+}
+
+function getStorefrontSessionUid(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(STOREFRONT_AUTH_KEY);
+}
+
+async function ensureStorefrontPersistence(auth: Auth) {
+  try {
+    await setPersistence(auth, browserSessionPersistence);
+  } catch {
+    /* already set */
+  }
+}
+
+async function signOutIfNotStorefrontSession(auth: Auth, fbUser: FirebaseUser | null): Promise<boolean> {
+  if (!fbUser) return false;
+  if (getStorefrontSessionUid() !== fbUser.uid) {
+    await signOut(auth);
+    return true;
+  }
+  return false;
+}
 
 function saveTestSession(user: User) {
   if (typeof window !== "undefined") {
@@ -210,11 +256,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingRegistration, setPendingRegistration] = useState(false);
+  const [pendingDisplayName, setPendingDisplayName] = useState<string | null>(null);
+  const [showWelcomeSplash, setShowWelcomeSplash] = useState(false);
+
+  const needsEmailVerification = Boolean(
+    !isMockDataMode() && firebaseUser && !firebaseUser.emailVerified
+  );
+
+  const dismissWelcomeSplash = () => setShowWelcomeSplash(false);
+
+  const triggerWelcomeIfNeeded = (fbUser: FirebaseUser, displayName: string) => {
+    const key = `myroach-welcome-${fbUser.uid}`;
+    if (typeof window !== "undefined" && sessionStorage.getItem(key) === "pending") {
+      sessionStorage.removeItem(key);
+      setPendingDisplayName(displayName);
+      setShowWelcomeSplash(true);
+    }
+  };
 
   useEffect(() => {
     if (!isMockDataMode()) return;
     const saved = loadTestSession();
-    if (saved) setUser(saved);
+    if (saved && getStorefrontSessionUid() === TEST_USER_ID) {
+      setUser(saved);
+    }
     setLoading(false);
   }, []);
 
@@ -227,6 +292,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    void ensureStorefrontPersistence(auth);
+
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (pendingRegistration) {
         setLoading(false);
@@ -238,19 +305,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      if (await signOutIfNotStorefrontSession(auth, fbUser)) {
+        setFirebaseUser(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       setFirebaseUser(fbUser);
       if (fbUser) {
+        if (!isMockDataMode() && !fbUser.emailVerified) {
+          setLoading(false);
+          return;
+        }
+
         try {
           if (shouldAttemptFirestore()) {
             const userDoc = await getDoc(doc(db, "users", fbUser.uid));
             if (userDoc.exists()) {
-              setUser(mapUser(fbUser.uid, userDoc.data() as Record<string, unknown>));
+              const mapped = mapUser(fbUser.uid, userDoc.data() as Record<string, unknown>);
+              if (mapped.role === "admin") {
+                await signOut(auth);
+                clearStorefrontSession();
+                setFirebaseUser(null);
+                setUser(null);
+                setLoading(false);
+                return;
+              }
+              setUser(mapped);
+              setPendingDisplayName(mapped.displayName);
+              if (fbUser.emailVerified) {
+                triggerWelcomeIfNeeded(fbUser, mapped.displayName);
+              }
               setLoading(false);
               return;
             }
           }
           const newUser = await upsertUserDoc(db, fbUser);
           setUser(newUser);
+          setPendingDisplayName(newUser.displayName);
+          if (fbUser.emailVerified) {
+            triggerWelcomeIfNeeded(fbUser, newUser.displayName);
+          }
         } catch (error) {
           if (isRecoverableFirestoreError(error)) {
             markFirestoreUnavailable();
@@ -272,13 +368,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setFirebaseUser(null);
     setPendingRegistration(false);
+    setPendingDisplayName(null);
+    setShowWelcomeSplash(false);
     clearTestSession();
+    clearStorefrontSession();
+  };
+
+  const sendVerificationEmail = async () => {
+    const auth = getAuth();
+    if (!auth?.currentUser) throw new Error("Not signed in");
+    await sendEmailVerification(auth.currentUser);
+  };
+
+  const checkEmailVerified = async (): Promise<boolean> => {
+    const auth = getAuth();
+    const db = getFirestore();
+    if (!auth?.currentUser) return false;
+    await auth.currentUser.reload();
+    setFirebaseUser(auth.currentUser);
+    if (!auth.currentUser.emailVerified) return false;
+
+    markStorefrontSession(auth.currentUser.uid);
+
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(`myroach-welcome-${auth.currentUser.uid}`, "pending");
+    }
+
+    if (db && shouldAttemptFirestore()) {
+      try {
+        const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+        if (userDoc.exists()) {
+          const mapped = mapUser(auth.currentUser.uid, userDoc.data() as Record<string, unknown>);
+          setUser(mapped);
+          setPendingDisplayName(mapped.displayName);
+          triggerWelcomeIfNeeded(auth.currentUser, mapped.displayName);
+          return true;
+        }
+      } catch (error) {
+        if (isRecoverableFirestoreError(error)) markFirestoreUnavailable();
+      }
+    }
+
+    const local = buildLocalUser(auth.currentUser, { displayName: pendingDisplayName ?? undefined });
+    setUser(local);
+    triggerWelcomeIfNeeded(auth.currentUser, local.displayName);
+    return true;
   };
 
   const signInWithEmail = async (email: string, password: string) => {
     const auth = getAuth();
+    const db = getFirestore();
     if (!auth) throw new Error("Firebase Auth is not configured");
-    await signInWithEmailAndPassword(auth, email, password);
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    markStorefrontSession(cred.user.uid);
+
+    if (db && shouldAttemptFirestore()) {
+      try {
+        const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+        if (userDoc.exists()) {
+          const mapped = mapUser(cred.user.uid, userDoc.data() as Record<string, unknown>);
+          if (mapped.role === "admin") {
+            await signOut(auth);
+            clearStorefrontSession();
+            throw new Error("ADMIN_USE_PANEL");
+          }
+        }
+      } catch (error) {
+        if (error instanceof Error && error.message === "ADMIN_USE_PANEL") throw error;
+        if (!isRecoverableFirestoreError(error)) throw error;
+      }
+    }
+
+    if (!cred.user.emailVerified) {
+      setPendingDisplayName(cred.user.displayName || email.split("@")[0]);
+      return { needsVerification: true };
+    }
+    return { needsVerification: false };
   };
 
   const signUpWithEmail = async (email: string, password: string, name: string) => {
@@ -286,6 +451,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const db = getFirestore();
     if (!auth || !db) throw new Error("Firebase is not configured");
     const cred = await createUserWithEmailAndPassword(auth, email, password);
+    markStorefrontSession(cred.user.uid);
+    await sendEmailVerification(cred.user);
+    setPendingDisplayName(name);
     await setDoc(doc(db, "users", cred.user.uid), {
       name,
       email,
@@ -295,6 +463,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+    return { needsVerification: true };
   };
 
   const signInWithTestCredentials = async (
@@ -317,6 +486,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!forRegistration) {
       saveTestSession(testUser);
+      markStorefrontSession(TEST_USER_ID);
     }
   };
 
@@ -335,6 +505,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(saved);
     setPendingRegistration(false);
     saveTestSession(saved);
+    markStorefrontSession(TEST_USER_ID);
   };
 
   const updateUserProfile = async (data: Partial<User>) => {
@@ -373,10 +544,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firebaseUser,
         loading,
         isAdmin: user?.role === "admin",
+        needsEmailVerification,
+        pendingDisplayName,
+        showWelcomeSplash,
         logout,
         signInWithTestCredentials,
         signInWithEmail,
         signUpWithEmail,
+        sendVerificationEmail,
+        checkEmailVerified,
+        dismissWelcomeSplash,
         completeTestRegistration,
         updateUserProfile,
         isConfigured: isFirebaseConfigured,

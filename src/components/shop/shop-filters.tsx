@@ -74,6 +74,32 @@ export function ShopFilters({ categories }: ShopFiltersProps) {
       </div>
 
       <div>
+        <Label className="mb-3 block">Post to</Label>
+        <div className="space-y-1">
+          {[
+            { value: null, label: "All" },
+            { value: "male", label: "Male" },
+            { value: "female", label: "Female" },
+            { value: "unisex", label: "Unisex" },
+          ].map((opt) => (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => updateParams("gender", opt.value)}
+              className={cn(
+                "block w-full rounded-sm py-2.5 text-left text-sm transition-colors hover:text-accent-cyan",
+                (searchParams.get("gender") || null) === opt.value
+                  ? "font-medium text-accent-cyan"
+                  : "text-noire-muted"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
         <Label className="mb-3 block">Category</Label>
         <div className="space-y-1">
           <button
@@ -121,17 +147,23 @@ export function ShopFilters({ categories }: ShopFiltersProps) {
       </div>
 
       <div>
-        <Label className="mb-3 block">Price Range</Label>
+        <Label className="mb-3 block">Price Range (₹)</Label>
         <div className="flex gap-2">
           <Input
             type="number"
-            placeholder="Min"
+            inputMode="decimal"
+            step="any"
+            min={0}
+            placeholder="Min ₹"
             defaultValue={searchParams.get("minPrice") || ""}
             onBlur={(e) => updateParams("minPrice", e.target.value || null)}
           />
           <Input
             type="number"
-            placeholder="Max"
+            inputMode="decimal"
+            step="any"
+            min={0}
+            placeholder="Max ₹"
             defaultValue={searchParams.get("maxPrice") || ""}
             onBlur={(e) => updateParams("maxPrice", e.target.value || null)}
           />

@@ -96,6 +96,7 @@ export function PaymentContent() {
       const order = await createOrder({
         userId: user?.id,
         customerEmail: checkoutShipping.email,
+        customerPhone: checkoutShipping.phone,
         items: items.map((item) => ({
           productId: item.productId,
           name: item.name,
@@ -120,6 +121,8 @@ export function PaymentContent() {
           postalCode: checkoutShipping.postalCode,
           country: checkoutShipping.country,
           isDefault: false,
+          phone: checkoutShipping.phone,
+          email: checkoutShipping.email,
         },
         paymentMethod: method,
       });
@@ -237,7 +240,8 @@ export function PaymentContent() {
               <span className="text-noire-muted">Ship to</span>
               <span className="text-right text-xs">
                 {checkoutShipping.firstName} {checkoutShipping.lastName}<br />
-                {checkoutShipping.city}, {checkoutShipping.state}
+                {checkoutShipping.phone}<br />
+                {checkoutShipping.street}, {checkoutShipping.city}, {checkoutShipping.state} {checkoutShipping.postalCode}
               </span>
             </div>
             <div className="flex justify-between">

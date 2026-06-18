@@ -31,7 +31,12 @@ export function ShopContent({ initialCategory, categoryName, categoryImage }: Sh
 
   const search = searchParams.get("search") || undefined;
   const category = initialCategory || searchParams.get("category") || undefined;
+  const categoryIdForFilter = useMemo(
+    () => (category ? categories.find((c) => c.slug === category)?.id : undefined),
+    [category, categories]
+  );
   const filterParam = searchParams.get("filter");
+  const gender = searchParams.get("gender") || undefined;
   const sort = searchParams.get("sort") || "newest";
   const minPrice = searchParams.get("minPrice")
     ? Number(searchParams.get("minPrice"))
@@ -42,21 +47,30 @@ export function ShopContent({ initialCategory, categoryName, categoryImage }: Sh
 
   useEffect(() => {
     setPage(1);
-  }, [search, category, sort, minPrice, maxPrice, filterParam]);
+  }, [search, category, gender, sort, minPrice, maxPrice, filterParam]);
 
   const result = useMemo(
     () =>
       filter({
         search,
         category,
+        categoryId: categoryIdForFilter,
+        gender,
         minPrice,
         maxPrice,
         sort: filterParam === "new" ? "newest" : sort,
         page,
         limit: 12,
       }),
-    [filter, search, category, minPrice, maxPrice, sort, filterParam, page, products]
+    [filter, search, category, categoryIdForFilter, gender, minPrice, maxPrice, sort, filterParam, page, products]
   );
+
+  const liveCategory = useMemo(
+    () => (category ? categories.find((c) => c.slug === category) : undefined),
+    [category, categories]
+  );
+  const displayName = liveCategory?.name ?? categoryName ?? "The Collection";
+  const displayImage = liveCategory?.image ?? categoryImage;
 
   const isLoading = productsLoading || categoriesLoading;
 
@@ -67,17 +81,17 @@ export function ShopContent({ initialCategory, categoryName, categoryImage }: Sh
   return (
     <div className="page-enter mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-32">
       <div className="mb-12 text-center animate-fade-in">
-        {categoryImage && (
+        {displayImage && (
           <div className="relative mx-auto mb-6 aspect-[21/9] max-w-3xl overflow-hidden border border-noire-border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={categoryImage} alt={categoryName || ""} className="h-full w-full object-cover" />
+            <img src={displayImage} alt={displayName} className="h-full w-full object-cover" />
           </div>
         )}
         <p className="text-xs font-medium uppercase tracking-[0.3em] text-accent-cyan">
           explore the scene
         </p>
         <h1 className="font-display mt-3 text-3xl font-light tracking-wide sm:text-4xl md:text-5xl">
-          {categoryName || "The Collection"}
+          {displayName}
         </h1>
         <p className="mt-3 text-sm text-noire-muted">
           {isLoading ? "Loading drip..." : `${result.total} ${result.total === 1 ? "piece" : "pieces"} — drip check passed`}

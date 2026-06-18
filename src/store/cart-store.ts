@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { CartItem } from "@/types";
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_RATES } from "@/lib/constants";
 
@@ -17,17 +17,33 @@ export interface CheckoutShipping {
   country: string;
 }
 
+export interface ShippingOption {
+  id: string;
+  label: string;
+  price: number;
+  days: string;
+  provider?: string;
+}
+
+function clampQty(item: CartItem, quantity: number) {
+  const min = item.minOrderQty ?? 1;
+  const max = item.maxOrderQty ?? 99;
+  return Math.min(Math.max(quantity, min), max);
+}
+
 interface CartStore {
   items: CartItem[];
   couponCode: string | null;
   discount: number;
   shippingId: string;
+  shippingOptions: ShippingOption[] | null;
   checkoutShipping: CheckoutShipping | null;
   addItem: (item: CartItem) => void;
   removeItem: (productId: string, size: string, color: string) => void;
   updateQuantity: (productId: string, size: string, color: string, quantity: number) => void;
   setCoupon: (code: string | null, discount: number) => void;
   setShippingId: (id: string) => void;
+  setShippingOptions: (options: ShippingOption[] | null) => void;
   setCheckoutShipping: (shipping: CheckoutShipping | null) => void;
   clearCart: () => void;
   getSubtotal: () => number;
@@ -43,9 +59,11 @@ export const useCartStore = create<CartStore>()(
       couponCode: null,
       discount: 0,
       shippingId: "standard",
+      shippingOptions: null,
       checkoutShipping: null,
 
       addItem: (item) => {
+        const qty = clampQty(item, item.quantity);
         set((state) => {
           const existing = state.items.find(
             (i) =>
@@ -59,12 +77,12 @@ export const useCartStore = create<CartStore>()(
                 i.productId === item.productId &&
                 i.size === item.size &&
                 i.color === item.color
-                  ? { ...i, quantity: i.quantity + item.quantity }
+                  ? { ...i, quantity: clampQty(i, i.quantity + qty) }
                   : i
               ),
             };
           }
-          return { items: [...state.items, item] };
+          return { items: [...state.items, { ...item, quantity: qty }] };
         });
       },
 
@@ -85,7 +103,7 @@ export const useCartStore = create<CartStore>()(
         set((state) => ({
           items: state.items.map((i) =>
             i.productId === productId && i.size === size && i.color === color
-              ? { ...i, quantity }
+              ? { ...i, quantity: clampQty(i, quantity) }
               : i
           ),
         }));
@@ -93,6 +111,12 @@ export const useCartStore = create<CartStore>()(
 
       setCoupon: (code, discount) => set({ couponCode: code, discount }),
       setShippingId: (id) => set({ shippingId: id }),
+      setShippingOptions: (options) => {
+        set({ shippingOptions: options });
+        if (options?.length && !options.find((o) => o.id === get().shippingId)) {
+          set({ shippingId: options[0].id });
+        }
+      },
       setCheckoutShipping: (shipping) => set({ checkoutShipping: shipping }),
 
       clearCart: () =>
@@ -101,6 +125,8 @@ export const useCartStore = create<CartStore>()(
           couponCode: null,
           discount: 0,
           checkoutShipping: null,
+          shippingOptions: null,
+          shippingId: "standard",
         }),
 
       getSubtotal: () =>
@@ -109,8 +135,7 @@ export const useCartStore = create<CartStore>()(
       getShippingCost: () => {
         const subtotal = get().getSubtotal();
         if (subtotal >= FREE_SHIPPING_THRESHOLD) return 0;
-        const rate = SHIPPING_RATES.find((s) => s.id === get().shippingId);
-        return rate?.price ?? SHIPPING_RATES[0].price;
+        return SHIPPING_RATES[0].price;
       },
 
       getTotal: (shipping) => {
@@ -122,6 +147,9 @@ export const useCartStore = create<CartStore>()(
       getItemCount: () =>
         get().items.reduce((sum, item) => sum + item.quantity, 0),
     }),
-    { name: "myroach-cart" }
+    {
+      name: "myroach-cart",
+      storage: createJSONStorage(() => localStorage),
+    }
   )
 );

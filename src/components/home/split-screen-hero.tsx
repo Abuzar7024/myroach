@@ -4,47 +4,71 @@ import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import type { Banner } from "@/types";
-import { FALLBACK_HERO } from "@/lib/home-fallbacks";
+import type { Banner, Product } from "@/types";
+import { FALLBACK_HERO, FALLBACK_HERO_SLIDES } from "@/lib/home-fallbacks";
+import { formatPrice } from "@/lib/format";
 import { Shimmer } from "@/components/ui/shimmer";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface HeroCarouselProps {
   banners?: Banner[];
+  featuredProducts?: Product[];
   loading?: boolean;
 }
 
-/** Full-bleed hero — admin banner images, or branded fallback when empty. */
-export function SplitScreenHero({ banners = [], loading = false }: HeroCarouselProps) {
-  const adminSlides = banners.filter((b) => b.image);
-  const useFallback = !loading && adminSlides.length === 0;
+type Slide = {
+  id: string;
+  image: string;
+  tagline: string;
+  headline: string;
+  subline: string;
+  link: string;
+  isFallback: boolean;
+};
 
-  const slides = useFallback
-    ? [
-        {
-          id: "fallback-hero",
-          image: FALLBACK_HERO.image,
-          title: FALLBACK_HERO.headline,
-          subtitle: FALLBACK_HERO.subtitle,
-          link: FALLBACK_HERO.link,
-          isFallback: true,
-        },
-      ]
-    : adminSlides.map((b) => ({
-        id: b.id,
-        image: b.image,
-        title: b.title,
-        subtitle: b.subtitle || "",
-        link: b.link || "/shop",
-        isFallback: false,
-      }));
+function buildSlides(banners: Banner[]): Slide[] {
+  const adminSlides = banners.filter((b) => b.image);
+  if (adminSlides.length === 0) {
+    return FALLBACK_HERO_SLIDES.map((s, i) => ({
+      id: `fallback-${i}`,
+      image: s.image,
+      tagline: s.tagline,
+      headline: s.headline,
+      subline: s.subline,
+      link: FALLBACK_HERO.link,
+      isFallback: true,
+    }));
+  }
+  return adminSlides.map((b) => ({
+    id: b.id,
+    image: b.image,
+    tagline: b.subtitle || "neon certified",
+    headline: b.title,
+    subline: b.subtitle || "Certified underground drip — full send only.",
+    link: b.link || "/shop",
+    isFallback: false,
+  }));
+}
+
+/** Split hero — image panel + copy panel; admin banners or editorial fallback. */
+export function SplitScreenHero({
+  banners = [],
+  featuredProducts = [],
+  loading = false,
+}: HeroCarouselProps) {
+  const adminSlides = banners.filter((b) => b.image);
+  const slides = buildSlides(banners);
+  const heroProducts = featuredProducts.filter((p) => p.images[0]).slice(0, 4);
 
   const [activeSlide, setActiveSlide] = useState(0);
+  const [activeProduct, setActiveProduct] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [imageReady, setImageReady] = useState<Record<number, boolean>>({});
 
   const slideCount = slides.length;
+  const slide = slides[activeSlide];
+  const product = heroProducts[activeProduct] ?? heroProducts[0];
 
   const nextSlide = useCallback(() => {
     if (slideCount <= 1) return;
@@ -60,65 +84,91 @@ export function SplitScreenHero({ banners = [], loading = false }: HeroCarouselP
   if (loading && adminSlides.length === 0) {
     return (
       <section className="relative -mt-16 w-full lg:-mt-20">
-        <Shimmer className="aspect-[4/5] min-h-[280px] w-full sm:aspect-[16/9] lg:min-h-[560px]" />
+        <div className="grid lg:min-h-[min(88vh,720px)] lg:grid-cols-2">
+          <Shimmer className="aspect-[4/5] min-h-[300px] w-full sm:aspect-[16/10] lg:aspect-auto lg:min-h-0" />
+          <Shimmer className="min-h-[280px] border-t border-accent-cyan/10 lg:border-l lg:border-t-0" />
+        </div>
       </section>
     );
   }
 
-  const current = slides[activeSlide];
-
   return (
     <section
-      className="relative -mt-16 w-full overflow-hidden lg:-mt-20"
+      className="relative -mt-16 w-full overflow-hidden lg:-mt-20 lg:min-h-[min(88vh,720px)]"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       aria-label="Hero"
     >
-      <div className="relative aspect-[4/5] min-h-[320px] w-full sm:aspect-[16/9] lg:min-h-[min(88vh,760px)]">
-        {slides.map((slide, i) => (
-          <div
-            key={slide.id}
-            className={cn(
-              "absolute inset-0 transition-opacity duration-700 ease-out",
-              i === activeSlide ? "z-[1] opacity-100" : "z-0 opacity-0"
-            )}
-          >
-            {!imageReady[i] && (
-              <Shimmer className="absolute inset-0 z-[2] bg-noire-charcoal" aria-hidden />
-            )}
-            <Image
-              src={slide.image}
-              alt={slide.title.replace("\n", " ") || "MY ROACH hero"}
-              fill
-              priority={i === 0}
-              className="object-cover"
-              sizes="100vw"
-              onLoad={() => setImageReady((prev) => ({ ...prev, [i]: true }))}
-            />
+      <div className="grid lg:min-h-[min(88vh,720px)] lg:grid-cols-2">
+        <div className="relative aspect-[4/5] min-h-[300px] scanline-overlay sm:aspect-[16/10] md:min-h-[380px] lg:aspect-auto lg:min-h-0 lg:h-full">
+          {slides.map((s, i) => (
+            <div
+              key={s.id}
+              className={cn(
+                "absolute inset-0 transition-opacity duration-700 ease-out",
+                i === activeSlide ? "opacity-100" : "opacity-0"
+              )}
+            >
+              {!imageReady[i] && (
+                <Shimmer className="absolute inset-0 z-[1] bg-noire-charcoal" aria-hidden />
+              )}
+              <Image
+                src={s.image}
+                alt={s.headline.replace("\n", " ")}
+                fill
+                priority={i === 0}
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                onLoad={() => setImageReady((prev) => ({ ...prev, [i]: true }))}
+              />
+            </div>
+          ))}
+          <div className="absolute inset-0 bg-gradient-to-t from-noire-black/85 via-noire-black/25 to-noire-black/45 lg:bg-gradient-to-r lg:from-noire-black/20 lg:via-noire-black/10 lg:to-noire-black/60" />
+
+          <div className="absolute left-4 top-4 max-w-[calc(100%-2rem)] sm:left-6 sm:top-6 lg:left-10 lg:top-10">
+            <span className="sticker sticker-neon sticker-rotate-right">🪳 MY ROACH</span>
           </div>
-        ))}
 
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-noire-black/85 via-noire-black/25 to-noire-black/50" />
+          {slideCount > 1 && (
+            <div className="absolute bottom-6 left-4 flex gap-3 sm:bottom-8 sm:left-6 lg:bottom-12 lg:left-10">
+              {slides.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setActiveSlide(i)}
+                  className="group flex h-11 min-w-[44px] items-center justify-center"
+                  aria-label={`Go to slide ${i + 1}`}
+                >
+                  <span
+                    className={cn(
+                      "block h-0.5 transition-all duration-300",
+                      i === activeSlide
+                        ? "w-10 bg-accent-cyan shadow-[0_0_8px_rgba(0,240,255,0.6)]"
+                        : "w-4 bg-white/40 group-hover:bg-accent-cyan/70"
+                    )}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-        <div className="absolute inset-0 z-[3] flex flex-col justify-end px-4 pb-16 sm:px-8 sm:pb-20 lg:px-14 lg:pb-24">
-          <div key={activeSlide} className="max-w-2xl animate-fade-in text-noire-white">
-            {useFallback && (
-              <span className="sticker sticker-neon mb-4 inline-block">{FALLBACK_HERO.title}</span>
+        <div className="relative flex flex-col justify-between border-t border-accent-cyan/10 bg-noire-black px-4 py-8 text-noire-white sm:px-6 sm:py-10 md:px-8 md:py-12 lg:border-l lg:border-t-0 lg:px-14 lg:py-16">
+          <div key={activeSlide} className="flex flex-1 flex-col justify-center animate-fade-in">
+            {slide.isFallback ? (
+              <span className="sticker sticker-neon mb-4 w-fit">{FALLBACK_HERO.title}</span>
+            ) : (
+              <span className="sticker sticker-lime mb-4 max-w-full">{slide.tagline}</span>
             )}
-            {!useFallback && current.subtitle && (
-              <span className="sticker sticker-lime mb-4 inline-block">{current.subtitle}</span>
-            )}
-            <h1 className="hero-headline font-display whitespace-pre-line text-3xl leading-[1.05] tracking-wide sm:text-4xl md:text-5xl lg:text-7xl">
-              {useFallback ? FALLBACK_HERO.headline : current.title}
+            <h1 className="hero-headline glitch-text font-display whitespace-pre-line text-3xl leading-[1.05] tracking-wide sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
+              {slide.headline}
             </h1>
-            <p className="mt-4 max-w-lg text-sm leading-relaxed text-noire-white/75 sm:text-base">
-              {useFallback
-                ? FALLBACK_HERO.subtitle
-                : current.subtitle || "Certified underground drip — full send only."}
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-noire-white/75 sm:mt-6 sm:text-base">
+              {slide.subline}
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:gap-4">
               <Button asChild variant="drip" size="lg" className="w-full sm:w-auto">
-                <Link href={current.link || "/shop"}>
+                <Link href={slide.link}>
                   Shop the Drop
                   <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -128,30 +178,76 @@ export function SplitScreenHero({ banners = [], loading = false }: HeroCarouselP
               </Button>
             </div>
           </div>
-        </div>
 
-        {slideCount > 1 && (
-          <div className="absolute bottom-6 left-1/2 z-[4] flex -translate-x-1/2 gap-3">
-            {slides.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setActiveSlide(i)}
-                className="flex h-11 min-w-[44px] items-center justify-center"
-                aria-label={`Go to slide ${i + 1}`}
-              >
-                <span
-                  className={cn(
-                    "block h-0.5 transition-all duration-300",
-                    i === activeSlide
-                      ? "w-10 bg-accent-cyan shadow-[0_0_8px_rgba(0,240,255,0.6)]"
-                      : "w-4 bg-white/50"
-                  )}
-                />
-              </button>
-            ))}
-          </div>
-        )}
+          {product && (
+            <div className="mt-8 border-t border-accent-cyan/20 pt-6 sm:pt-8">
+              <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.25em] text-accent-lime">
+                In Rotation
+              </p>
+              <div className="flex items-center gap-3 sm:gap-5">
+                {heroProducts.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActiveProduct((prev) => (prev - 1 + heroProducts.length) % heroProducts.length)
+                    }
+                    className="hidden h-11 w-11 shrink-0 items-center justify-center text-noire-white/40 transition-colors hover:text-accent-cyan md:flex"
+                    aria-label="Previous product"
+                  >
+                    ←
+                  </button>
+                )}
+
+                <div key={product.id} className="flex min-w-0 flex-1 items-center gap-3 animate-fade-in sm:gap-4">
+                  <div className="relative h-14 w-12 shrink-0 overflow-hidden border border-accent-cyan/50 shadow-[0_0_8px_rgba(0,240,255,0.2)] sm:h-16 sm:w-14">
+                    <Image
+                      src={product.images[0]}
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                      sizes="56px"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/product/${product.slug}`}
+                      className="block truncate text-sm font-medium transition-colors hover:text-accent-cyan"
+                    >
+                      {product.name}
+                    </Link>
+                    <p className="text-xs text-noire-white/50">{formatPrice(product.price)}</p>
+                  </div>
+                  <Link
+                    href={`/product/${product.slug}`}
+                    className="shrink-0 py-2 text-xs font-semibold uppercase tracking-widest text-accent-cyan transition-colors hover:text-accent-pink"
+                  >
+                    Peep →
+                  </Link>
+                </div>
+
+                {heroProducts.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActiveProduct((prev) => (prev + 1) % heroProducts.length)
+                    }
+                    className="hidden h-11 w-11 shrink-0 items-center justify-center text-noire-white/40 transition-colors hover:text-accent-cyan md:flex"
+                    aria-label="Next product"
+                  >
+                    →
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 lg:block">
+        <div className="animate-scroll-bounce flex flex-col items-center gap-2 text-white/50">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.3em]">Scroll</span>
+          <span className="block h-8 w-px bg-accent-cyan/50 shadow-[0_0_6px_rgba(0,240,255,0.4)]" />
+        </div>
       </div>
     </section>
   );

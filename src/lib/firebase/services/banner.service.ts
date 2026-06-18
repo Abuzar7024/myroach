@@ -1,7 +1,7 @@
 import { subscribeCollection } from "../realtime";
 import { mapBanner } from "../mappers";
 import { COLLECTIONS } from "../models";
-import { getFirestore } from "../config";
+import { getReadFirestore } from "../config";
 import { isMockDataMode } from "@/lib/config";
 import { collection, getDocs } from "firebase/firestore";
 import type { Banner } from "@/types";
@@ -30,7 +30,7 @@ export async function fetchBannersOnce(position?: Banner["position"]): Promise<B
     const { banners } = await import("@/data/mock-data");
     return banners.filter((b) => b.isActive && (!position || b.position === position));
   }
-  const db = getFirestore();
+  const db = getReadFirestore();
   if (!db) return [];
   const snap = await getDocs(collection(db, COLLECTIONS.BANNERS));
   return snap.docs

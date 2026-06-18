@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { SplitScreenHero } from "@/components/home/split-screen-hero";
 import { FeaturedCollections } from "@/components/home/hero-section";
+import { FeaturedProducts } from "@/components/home/featured-products";
 import {
   ProductSection,
   PromoBanner,
@@ -59,6 +60,11 @@ export function HomePageLive() {
     return categories;
   }, [categories, homepage.featuredCollectionIds]);
 
+  const heroProducts = useMemo(
+    () => products.filter((p) => p.isFeatured && p.images[0]).slice(0, 4),
+    [products]
+  );
+
   const initialLoad =
     (productsLoading || categoriesLoading || bannersLoading || homepageLoading) &&
     products.length === 0 &&
@@ -75,9 +81,23 @@ export function HomePageLive() {
 
   return (
     <>
-      <SplitScreenHero banners={banners} loading={bannersLoading} />
+      <SplitScreenHero
+        banners={banners}
+        featuredProducts={heroProducts}
+        loading={bannersLoading}
+      />
 
-      <FeaturedCollections categories={featuredCategories} loading={categoriesLoading} />
+      {homepage.showFeaturedProducts !== false && (
+        <FeaturedProducts
+          products={products}
+          rotateSeconds={homepage.featuredRotateSeconds ?? 5}
+          loading={productsLoading}
+        />
+      )}
+
+      {homepage.showFeatured !== false && (
+        <FeaturedCollections categories={featuredCategories} loading={categoriesLoading} />
+      )}
 
       <ProductSection
         title="LATEST DROPS"
@@ -122,9 +142,9 @@ export function HomePageLive() {
         />
       )}
 
-      <ShopTeaserSection />
-      <BrandStory />
-      <Newsletter />
+      {homepage.showShopTeaser !== false && <ShopTeaserSection />}
+      {homepage.showBrandStory !== false && <BrandStory />}
+      {homepage.showNewsletter !== false && <Newsletter />}
     </>
   );
 }

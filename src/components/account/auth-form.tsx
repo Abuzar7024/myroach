@@ -4,6 +4,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/auth-context";
 import { TEST_OTP, TEST_PHONE } from "@/lib/auth-utils";
+import { ADMIN_PANEL_URL } from "@/lib/config";
 import { FadeIn } from "@/components/ui/motion";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -33,7 +34,7 @@ export function AuthForm() {
           </Button>
           {user.role === "admin" && (
             <Button asChild variant="luxury">
-              <Link href="/admin">Admin Dashboard</Link>
+              <a href={`${ADMIN_PANEL_URL}/login`}>Admin Panel</a>
             </Button>
           )}
           <Button

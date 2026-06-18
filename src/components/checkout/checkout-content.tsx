@@ -1,17 +1,26 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MobileOrderSummary } from "@/components/layout/mobile-order-summary";
+import { BottomIsland } from "@/components/ui/bottom-island";
 import { useCartStore } from "@/store/cart-store";
+import { useAuth } from "@/contexts/auth-context";
 import { formatPrice } from "@/lib/format";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
+import {
+  buildCheckoutDefaults,
+  buildProfileFromCheckout,
+  getProfileGaps,
+} from "@/lib/checkout-profile";
 import { toast } from "sonner";
 
 const checkoutSchema = z.object({
@@ -89,6 +98,7 @@ function SummaryLines({
 
 export function CheckoutContent() {
   const router = useRouter();
+  const { user, updateUserProfile } = useAuth();
   const {
     items,
     getSubtotal,
@@ -100,19 +110,28 @@ export function CheckoutContent() {
     checkoutShipping,
   } = useCartStore();
 
+  const [saving, setSaving] = useState(false);
+
+  const defaultValues = useMemo(
+    () => (user ? buildCheckoutDefaults(user, checkoutShipping) : { country: "India" }),
+    [user, checkoutShipping]
+  );
+
+  const profileGaps = useMemo(() => (user ? getProfileGaps(user) : []), [user]);
+
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<CheckoutForm>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: checkoutShipping
-      ? {
-          ...checkoutShipping,
-          country: checkoutShipping.country || "India",
-        }
-      : { country: "India" },
+    defaultValues,
   });
+
+  useEffect(() => {
+    if (user) reset(buildCheckoutDefaults(user, checkoutShipping));
+  }, [user, checkoutShipping, reset]);
 
   const shipping = getShippingCost();
   const subtotal = getSubtotal();
@@ -129,20 +148,46 @@ export function CheckoutContent() {
     );
   }
 
-  const onSubmit = (data: CheckoutForm) => {
-    setCheckoutShipping(data);
-    toast.success("Shipping details saved");
-    router.push("/checkout/payment");
+  const onSubmit = async (data: CheckoutForm) => {
+    setSaving(true);
+    try {
+      setCheckoutShipping(data);
+      if (user) {
+        await updateUserProfile(buildProfileFromCheckout(user, data));
+      }
+      toast.success("Delivery details saved");
+      router.push("/checkout/payment");
+    } catch {
+      toast.error("Could not save your details. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const summaryProps = { items, subtotal, discount, couponCode, shipping, total };
 
   return (
     <>
-      <div className="mx-auto max-w-7xl px-4 py-8 pb-28 sm:px-6 sm:py-16 lg:px-8 lg:py-32 lg:pb-32">
-        <h1 className="font-display mb-8 text-2xl font-light tracking-wide sm:mb-12 sm:text-3xl">
+      <div className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 sm:py-16 lg:px-8 lg:py-32 lg:pb-32">
+        <h1 className="font-display mb-4 text-2xl font-light tracking-wide sm:mb-6 sm:text-3xl">
           Checkout
         </h1>
+        <p className="mb-8 text-sm text-noire-muted">
+          Signed in as <span className="text-zinc-300">{user?.email}</span>. Complete your delivery details below.
+        </p>
+
+        {profileGaps.length > 0 && (
+          <div className="mb-8 flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              Please add your{" "}
+              {profileGaps
+                .map((g) => (g === "name" ? "full name" : g === "phone" ? "mobile number" : "delivery address"))
+                .join(", ")}{" "}
+              to continue. These details are required for delivery and order updates.
+            </p>
+          </div>
+        )}
 
         <form
           id="checkout-form"
@@ -271,35 +316,31 @@ export function CheckoutContent() {
           </div>
 
           <div className="h-fit cyber-card p-4 sm:p-6 lg:p-8">
+            <h2 className="mb-4 hidden text-sm font-medium uppercase tracking-widest lg:block">Order Summary</h2>
             <MobileOrderSummary total={total}>
               <SummaryLines {...summaryProps} />
             </MobileOrderSummary>
-
-            <div className="hidden lg:block">
-              <h2 className="text-sm font-medium uppercase tracking-widest">Order Summary</h2>
-              <div className="mt-4">
-                <SummaryLines {...summaryProps} />
-              </div>
-              <Button type="submit" size="lg" className="mt-8 w-full min-h-[44px]">
-                Continue to Payment
-              </Button>
-            </div>
+            <Button type="submit" size="lg" className="mt-6 hidden w-full min-h-[44px] lg:flex" disabled={saving}>
+              {saving ? "Saving..." : "Continue to Payment"}
+            </Button>
           </div>
         </form>
       </div>
 
-      {/* Fixed mobile payment bar */}
-      <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-40 border-t border-accent-cyan/30 bg-noire-charcoal/98 px-4 py-3 lg:hidden">
-        <div className="mx-auto flex max-w-lg items-center gap-4">
-          <div className="flex-1">
-            <p className="text-xs text-noire-muted">Total</p>
-            <p className="text-lg font-semibold text-accent-cyan">{formatPrice(total)}</p>
-          </div>
-          <Button type="submit" form="checkout-form" size="lg" className="min-h-[44px] flex-1">
-            Continue to Payment
+      <BottomIsland
+        label="Total"
+        primary={formatPrice(total)}
+        action={
+          <Button
+            type="submit"
+            form="checkout-form"
+            disabled={saving}
+            className="h-10 min-h-10 rounded-full px-5 text-[11px] tracking-wider"
+          >
+            {saving ? "..." : "Pay"}
           </Button>
-        </div>
-      </div>
+        }
+      />
     </>
   );
 }

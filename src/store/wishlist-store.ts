@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { WishlistItem } from "@/types";
 
 interface WishlistStore {
@@ -42,6 +42,9 @@ export const useWishlistStore = create<WishlistStore>()(
         }
       },
     }),
-    { name: "noire-wishlist" }
+    {
+      name: "myroach-wishlist",
+      storage: createJSONStorage(() => localStorage),
+    }
   )
 );

@@ -56,4 +56,8 @@ export const SHIPPING_RATES = [
   { id: "overnight", label: "Overnight", price: 399, days: "Next business day" },
 ] as const;
 
+export const DEFAULT_RETURN_POLICY = "10 days easy return";
+export const DEFAULT_MIN_ORDER_QTY = 1;
+export const DEFAULT_MAX_ORDER_QTY = 10;
+
 export const PRODUCT_SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;

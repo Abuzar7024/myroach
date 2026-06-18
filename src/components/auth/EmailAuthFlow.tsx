@@ -30,19 +30,31 @@ export function EmailAuthFlow({ mode = "login", onSuccess }: EmailAuthFlowProps)
     try {
       if (mode === "register") {
         if (!name.trim()) {
-          toast.error("Full name is required");
+          toast.error("Username is required");
           setLoading(false);
           return;
         }
-        await signUpWithEmail(email.trim(), password, name.trim());
+        const result = await signUpWithEmail(email.trim(), password, name.trim());
+        if (result.needsVerification) {
+          toast.success("Check your email — verification link sent (check spam too)");
+          return;
+        }
         toast.success("Account created — welcome to the rotation");
       } else {
-        await signInWithEmail(email.trim(), password);
+        const result = await signInWithEmail(email.trim(), password);
+        if (result.needsVerification) {
+          toast.info("Verify your email first — check inbox and spam");
+          return;
+        }
         toast.success("Signed in successfully");
       }
       onSuccess?.();
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Authentication failed";
+      if (msg === "ADMIN_USE_PANEL") {
+        toast.error("Admin accounts sign in at the admin panel, not the store");
+        return;
+      }
       toast.error(msg.includes("auth/") ? "Invalid email or password" : msg);
     } finally {
       setLoading(false);
@@ -53,12 +65,12 @@ export function EmailAuthFlow({ mode = "login", onSuccess }: EmailAuthFlowProps)
     <form onSubmit={handleSubmit} className="space-y-4">
       {mode === "register" && (
         <div>
-          <Label htmlFor="name">Full name</Label>
+          <Label htmlFor="name">Username</Label>
           <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
+            placeholder="What should we call you?"
             required
             className="mt-1"
           />
@@ -94,6 +106,11 @@ export function EmailAuthFlow({ mode = "login", onSuccess }: EmailAuthFlowProps)
       <Button type="submit" className="w-full" loading={loading}>
         {mode === "register" ? "Create Account" : "Sign In"}
       </Button>
+      {mode === "register" && (
+        <p className="text-center text-xs text-noire-muted">
+          We&apos;ll email a verification link. Check spam if you don&apos;t see it.
+        </p>
+      )}
     </form>
   );
 }

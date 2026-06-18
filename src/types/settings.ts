@@ -1,7 +1,10 @@
+import type { FooterConfig } from "@/lib/footer-config";
+
 export interface StoreSettings {
   logo?: string;
   storeName?: string;
   footerContent?: string;
+  footerConfig?: FooterConfig;
   socialLinks?: {
     facebook?: string;
     instagram?: string;
@@ -22,6 +25,8 @@ export interface StoreSettings {
 
 export interface HomepageSettings {
   showFeatured?: boolean;
+  showFeaturedProducts?: boolean;
+  featuredRotateSeconds?: number;
   featuredCollectionIds?: string[];
   showBestSellers?: boolean;
   bestSellerIds?: string[];
@@ -30,4 +35,7 @@ export interface HomepageSettings {
   showPromo?: boolean;
   promoTitle?: string;
   promoSubtitle?: string;
+  showShopTeaser?: boolean;
+  showBrandStory?: boolean;
+  showNewsletter?: boolean;
 }

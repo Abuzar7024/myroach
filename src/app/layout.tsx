@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Orbitron, Rajdhani } from "next/font/google";
 import { SiteShell } from "@/components/layout/site-shell";
 import { Providers } from "@/components/providers";
+import { AppCheckDebug } from "@/components/firebase/app-check-debug";
 import { SITE_NAME, SITE_DESCRIPTION, SITE_URL } from "@/lib/constants";
 import { isMockDataMode } from "@/lib/firebase/config";
 import "./globals.css";
@@ -57,20 +58,11 @@ export default function RootLayout({
       className={`${orbitron.variable} ${rajdhani.variable} h-full`}
       suppressHydrationWarning
     >
-      <head>
-        {appCheckDebugToken ? (
-          <script
-            id="firebase-app-check-debug-token"
-            dangerouslySetInnerHTML={{
-              __html: `self.FIREBASE_APPCHECK_DEBUG_TOKEN=${JSON.stringify(appCheckDebugToken)};`,
-            }}
-          />
-        ) : null}
-      </head>
       <body
         className="min-h-full flex flex-col antialiased cyber-grid text-foreground bg-background"
         suppressHydrationWarning
       >
+        {appCheckDebugToken ? <AppCheckDebug token={appCheckDebugToken} /> : null}
         <Providers>
           <SiteShell>{children}</SiteShell>
         </Providers>

@@ -4,14 +4,14 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  updateDoc,
   serverTimestamp,
-  runTransaction,
   increment,
 } from "firebase/firestore";
 import { subscribeCollection } from "../realtime";
 import { mapProduct, mapCoupon, mapReview } from "../mappers";
 import { COLLECTIONS } from "../models";
-import { getFirestore } from "../config";
+import { getFirestore, getReadFirestore } from "../config";
 import { isMockDataMode } from "@/lib/config";
 import type { Product, Coupon, Review } from "@/types";
 
@@ -42,7 +42,13 @@ export function subscribeProductBySlug(
     COLLECTIONS.PRODUCTS,
     [],
     mapProduct,
-    (items) => onData(items.find((p) => p.slug === slug && p.isActive) ?? null),
+    (items) => onData(items.find((p) => {
+      const target = decodeURIComponent(slug).trim().toLowerCase();
+      return (
+        p.isActive &&
+        (p.slug.toLowerCase() === target || p.id.toLowerCase() === target)
+      );
+    }) ?? null),
     onError
   );
 }
@@ -74,7 +80,7 @@ export function subscribeProductReviews(
 
 export async function fetchProductsOnce(): Promise<Product[]> {
   if (isMockDataMode()) return loadMockProducts();
-  const db = getFirestore();
+  const db = getReadFirestore();
   if (!db) return [];
   const snap = await getDocs(collection(db, COLLECTIONS.PRODUCTS));
   return snap.docs
@@ -82,13 +88,26 @@ export async function fetchProductsOnce(): Promise<Product[]> {
     .filter((p) => p.isActive);
 }
 
+function normalizeSlug(slug: string): string {
+  try {
+    return decodeURIComponent(slug).trim().toLowerCase();
+  } catch {
+    return slug.trim().toLowerCase();
+  }
+}
+
 export async function fetchProductBySlugOnce(slug: string): Promise<Product | null> {
   if (isMockDataMode()) {
     const { getProductBySlug } = await import("@/data/mock-data");
     return getProductBySlug(slug) ?? null;
   }
+  const target = normalizeSlug(slug);
   const products = await fetchProductsOnce();
-  return products.find((p) => p.slug === slug) ?? null;
+  return (
+    products.find(
+      (p) => p.slug.toLowerCase() === target || p.id.toLowerCase() === target
+    ) ?? null
+  );
 }
 
 export async function fetchProductsByIds(ids: string[]): Promise<Product[]> {
@@ -111,7 +130,7 @@ export async function fetchRelatedProductsOnce(
 
 export async function fetchReviewsOnce(productId: string): Promise<Review[]> {
   if (isMockDataMode()) return [];
-  const db = getFirestore();
+  const db = getReadFirestore();
   if (!db) return [];
   const snap = await getDocs(collection(db, COLLECTIONS.REVIEWS));
   return snap.docs
@@ -156,6 +175,7 @@ export async function createOrderInFirestore(order: {
   userId: string;
   customerName: string;
   customerEmail: string;
+  customerPhone?: string;
   items: { productId: string; title: string; quantity: number; price: number; image: string }[];
   subtotal: number;
   tax: number;
@@ -167,27 +187,46 @@ export async function createOrderInFirestore(order: {
   shippingAddress: Record<string, string>;
   couponCode?: string;
   paymentMethod?: string;
+  orderNumber?: string;
 }) {
   const db = getFirestore();
   if (!db) throw new Error("Firestore unavailable");
 
-  await runTransaction(db, async (tx) => {
-    for (const item of order.items) {
+  const docData: Record<string, unknown> = {
+    id: order.id,
+    userId: order.userId,
+    customerName: order.customerName,
+    customerEmail: order.customerEmail,
+    items: order.items,
+    subtotal: order.subtotal,
+    tax: order.tax,
+    shippingCharge: order.shippingCharge,
+    discount: order.discount,
+    total: order.total,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    shippingAddress: order.shippingAddress,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  if (order.customerPhone) docData.customerPhone = order.customerPhone;
+  if (order.couponCode) docData.couponCode = order.couponCode;
+  if (order.paymentMethod) docData.paymentMethod = order.paymentMethod;
+  if (order.orderNumber) docData.orderNumber = order.orderNumber;
+
+  await setDoc(doc(db, COLLECTIONS.ORDERS, order.id), docData);
+
+  for (const item of order.items) {
+    try {
       const productRef = doc(db, COLLECTIONS.PRODUCTS, item.productId);
-      const productSnap = await tx.get(productRef);
-      if (productSnap.exists()) {
-        const data = productSnap.data();
-        if (typeof data.stock === "number") {
-          tx.update(productRef, { stock: increment(-item.quantity) });
-        }
+      const productSnap = await getDoc(productRef);
+      if (productSnap.exists() && typeof productSnap.data().stock === "number") {
+        await updateDoc(productRef, { stock: increment(-item.quantity) });
       }
+    } catch {
+      // Stock decrement is best-effort — order is already saved for admin
     }
-    tx.set(doc(db, COLLECTIONS.ORDERS, order.id), {
-      ...order,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  });
+  }
 }
 
 export async function fetchCouponsOnce(): Promise<Coupon[]> {
@@ -195,7 +234,7 @@ export async function fetchCouponsOnce(): Promise<Coupon[]> {
     const { coupons } = await import("@/data/mock-data");
     return coupons.filter((c) => c.isActive);
   }
-  const db = getFirestore();
+  const db = getReadFirestore();
   if (!db) return [];
   const snap = await getDocs(collection(db, COLLECTIONS.COUPONS));
   return snap.docs

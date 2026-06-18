@@ -6,7 +6,6 @@ import dynamic from "next/dynamic";
 import { FadeIn } from "@/components/ui/motion";
 import { getAndClearReturnUrl, TEST_OTP, TEST_PHONE } from "@/lib/auth-utils";
 import { isMockDataMode } from "@/lib/config";
-import { ADMIN_PANEL_URL } from "@/lib/config";
 
 const EmailAuthFlow = dynamic(
   () => import("@/components/auth/EmailAuthFlow").then((m) => m.EmailAuthFlow),
@@ -36,7 +35,7 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-noire-muted">
             {mockMode
               ? `Test login — phone ${TEST_PHONE}, OTP ${TEST_OTP}`
-              : "Sign in with your Firebase account (same as admin panel project)"}
+              : "Customer sign-in — email & password"}
           </p>
         </div>
 
@@ -54,15 +53,6 @@ export default function LoginPage() {
             Create one
           </Link>
         </p>
-
-        {!mockMode && (
-          <p className="mt-4 text-center text-xs text-noire-muted">
-            Admin?{" "}
-            <a href={`${ADMIN_PANEL_URL}/login`} className="text-accent-cyan hover:underline">
-              Open admin panel
-            </a>
-          </p>
-        )}
       </FadeIn>
     </div>
   );

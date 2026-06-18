@@ -3,6 +3,8 @@ import type { Product } from "@/types";
 export interface ProductFilterOptions {
   search?: string;
   category?: string;
+  categoryId?: string;
+  gender?: string;
   minPrice?: number;
   maxPrice?: number;
   sort?: string;
@@ -27,7 +29,17 @@ export function filterProductsList(
   }
 
   if (options.category) {
-    result = result.filter((p) => p.categorySlug === options.category);
+    result = result.filter(
+      (p) =>
+        p.categorySlug === options.category ||
+        (options.categoryId != null && p.categoryId === options.categoryId)
+    );
+  }
+
+  if (options.gender && options.gender !== "all") {
+    result = result.filter(
+      (p) => !p.gender || p.gender === options.gender || p.gender === "unisex"
+    );
   }
 
   if (options.minPrice !== undefined) {

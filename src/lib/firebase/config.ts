@@ -7,6 +7,8 @@ import {
 } from "firebase/auth";
 import {
   getFirestore as getFirebaseFirestore,
+  initializeFirestore,
+  memoryLocalCache,
   type Firestore,
 } from "firebase/firestore";
 import { initFirestoreLogging } from "./firestore-utils";
@@ -77,16 +79,49 @@ export function getAuth(): Auth | null {
 }
 
 let firestore: Firestore | undefined;
+let serverFirestore: Firestore | undefined;
 
 export function getFirestore(): Firestore | null {
-  if (!isFirebaseConfigured) {
+  if (typeof window === "undefined" || !isFirebaseConfigured) {
     return null;
   }
   initFirestoreLogging();
   if (!firestore) {
-    firestore = getFirebaseFirestore(getFirebaseApp());
+    try {
+      firestore = initializeFirestore(getFirebaseApp(), {
+        localCache: memoryLocalCache(),
+      });
+    } catch {
+      firestore = getFirebaseFirestore(getFirebaseApp());
+    }
   }
   return firestore;
+}
+
+/** Firestore for Server Components / SSR reads (shop cards use client subscriptions). */
+export function getServerFirestore(): Firestore | null {
+  if (!isFirebaseConfigured) {
+    return null;
+  }
+  if (!serverFirestore) {
+    const app = getFirebaseApp();
+    try {
+      serverFirestore = initializeFirestore(app, {
+        localCache: memoryLocalCache(),
+      });
+    } catch {
+      serverFirestore = getFirebaseFirestore(app);
+    }
+  }
+  return serverFirestore;
+}
+
+/** Read-only Firestore — works in Server Components and on the client. */
+export function getReadFirestore(): Firestore | null {
+  if (typeof window === "undefined") {
+    return getServerFirestore();
+  }
+  return getFirestore();
 }
 
 let storage: FirebaseStorage | undefined;

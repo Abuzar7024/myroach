@@ -1,13 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import type { Category } from "@/types";
-import { FALLBACK_CATEGORY_TILES } from "@/lib/home-fallbacks";
 import { FadeIn } from "@/components/ui/motion";
 import { Shimmer } from "@/components/ui/shimmer";
 import { ComingSoonBlock } from "@/components/home/empty-states";
+import { FALLBACK_CATEGORY_TILES } from "@/lib/home-fallbacks";
 
 export { SplitScreenHero } from "./split-screen-hero";
 
@@ -16,11 +16,21 @@ interface FeaturedCollectionsProps {
   loading?: boolean;
 }
 
-export function FeaturedCollections({ categories, loading = false }: FeaturedCollectionsProps) {
-  const hasLive = categories.some((c) => c.image);
-  const showFallback = !loading && !hasLive;
+function genderBadge(gender?: Category["gender"]) {
+  if (gender === "male") return "male";
+  if (gender === "female") return "female";
+  return "all";
+}
 
-  if (loading && categories.length === 0) {
+function categoryImage(cat: Category, index: number) {
+  if (cat.image) return cat.image;
+  return FALLBACK_CATEGORY_TILES[index % FALLBACK_CATEGORY_TILES.length]?.image;
+}
+
+export function FeaturedCollections({ categories, loading = false }: FeaturedCollectionsProps) {
+  const liveCategories = categories.filter((c) => c.isActive);
+
+  if (loading && liveCategories.length === 0) {
     return (
       <section className="py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -35,93 +45,64 @@ export function FeaturedCollections({ categories, loading = false }: FeaturedCol
     );
   }
 
-  const tiles = showFallback
-    ? FALLBACK_CATEGORY_TILES.map((t, i) => ({
-        id: `fallback-${i}`,
-        name: t.name,
-        description: t.tagline,
-        slug: "",
-        image: t.image,
-        comingSoon: true,
-      }))
-    : categories.filter((c) => c.image).map((c) => ({
-        id: c.id,
-        name: c.name,
-        description: c.description,
-        slug: c.slug,
-        image: c.image!,
-        comingSoon: false,
-      }));
-
-  return (
-    <section className="py-16 lg:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <FadeIn className="mb-12 text-center">
-          <span className="sticker sticker-pink mb-4">
-            {showFallback ? "lanes loading" : "pick your lane"}
-          </span>
-          <h2 className="font-display mt-3 text-4xl tracking-wide md:text-5xl">THE ROTATION</h2>
-          {showFallback && (
-            <p className="mt-3 text-sm text-noire-muted">
-              Collections dropping soon — till then, peep the vibe boards below, bhai.
-            </p>
-          )}
-        </FadeIn>
-
-        {tiles.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
-            {tiles.map((cat) => (
-              <FadeIn key={cat.id}>
-                {cat.comingSoon ? (
-                  <div className="group relative block aspect-[4/5] overflow-hidden border border-noire-border">
-                    <Image
-                      src={cat.image}
-                      alt={cat.name}
-                      fill
-                      className="object-cover opacity-70"
-                      sizes="(max-width: 768px) 50vw, 25vw"
-                    />
-                    <div className="absolute inset-0 bg-noire-black/60" />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center text-noire-white">
-                      <span className="sticker sticker-neon text-[10px]">soon™</span>
-                      <h3 className="font-display mt-3 text-xl tracking-wide sm:text-2xl">{cat.name}</h3>
-                      <p className="mt-1 text-xs text-noire-white/70">{cat.description}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <Link
-                    href={`/collections/${cat.slug}`}
-                    className="group relative block aspect-[4/5] overflow-hidden border border-noire-border neon-border-hover"
-                  >
-                    <Image
-                      src={cat.image}
-                      alt={cat.name}
-                      fill
-                      className="object-cover transition-opacity duration-300 group-hover:opacity-90"
-                      sizes="(max-width: 768px) 50vw, 25vw"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-noire-black/80 via-noire-black/20 to-transparent" />
-                    <div className="absolute bottom-0 left-0 p-4 text-noire-white sm:p-6">
-                      <h3 className="font-display text-2xl tracking-wide sm:text-3xl">{cat.name}</h3>
-                      {cat.description && (
-                        <p className="mt-1 text-sm text-noire-white/70">{cat.description}</p>
-                      )}
-                      <span className="mt-3 inline-flex items-center text-xs font-semibold uppercase tracking-widest text-accent-cyan opacity-0 transition-opacity group-hover:opacity-100">
-                        Shop Now <ArrowRight className="ml-2 h-3 w-3" />
-                      </span>
-                    </div>
-                  </Link>
-                )}
-              </FadeIn>
-            ))}
-          </div>
-        ) : (
+  if (!loading && liveCategories.length === 0) {
+    return (
+      <section className="py-16 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <ComingSoonBlock
             title="Collections cooking"
             subtitle="Categories haven't dropped yet. The admin squad is curating the rotation — hoodies, tees, and certified chaos incoming."
             ctaLabel="Browse shop"
           />
-        )}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="py-16 lg:py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <FadeIn className="mb-12 text-center">
+          <span className="sticker sticker-pink mb-4">pick your lane</span>
+          <h2 className="font-display mt-3 text-4xl tracking-wide md:text-5xl">THE ROTATION</h2>
+        </FadeIn>
+
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
+          {liveCategories.map((cat, index) => {
+            const image = categoryImage(cat, index);
+            return (
+              <FadeIn key={cat.id}>
+                <Link
+                  href={`/collections/${cat.slug}`}
+                  className="group relative flex aspect-[4/5] flex-col justify-end overflow-hidden border border-noire-border bg-noire-charcoal neon-border-hover"
+                >
+                  {image && (
+                    <Image
+                      src={image}
+                      alt={cat.name}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      sizes="(max-width: 640px) 50vw, 25vw"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-noire-black/90 via-noire-black/35 to-noire-black/20" />
+                  <div className="relative z-[1] p-4 sm:p-6">
+                    <span className="sticker sticker-neon mb-3 w-fit text-[10px] uppercase">
+                      {genderBadge(cat.gender)}
+                    </span>
+                    <h3 className="font-display text-xl tracking-wide text-noire-white sm:text-2xl">{cat.name}</h3>
+                    {cat.description && (
+                      <p className="mt-1 line-clamp-2 text-xs text-noire-white/70">{cat.description}</p>
+                    )}
+                    <span className="mt-3 inline-flex items-center text-xs font-semibold uppercase tracking-widest text-accent-cyan opacity-80 transition-opacity group-hover:opacity-100">
+                      Shop Now <ArrowRight className="ml-2 h-3 w-3" />
+                    </span>
+                  </div>
+                </Link>
+              </FadeIn>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { ProductDetails } from "@/components/product/product-details";
-import {
-  fetchProductBySlugOnce,
-  fetchRelatedProductsOnce,
-  fetchReviewsOnce,
-} from "@/lib/firebase/services/product.service";
+import { fetchProductBySlugOnce } from "@/lib/firebase/services/product.service";
+import { ProductPageClient } from "./product-page-client";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -22,27 +17,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: product.name,
       description: product.shortDescription,
-      images: [{ url: product.images[0] }],
+      images: product.images[0] ? [{ url: product.images[0] }] : undefined,
     },
   };
 }
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const product = await fetchProductBySlugOnce(slug);
-
-  if (!product) notFound();
-
-  const [relatedProducts, reviews] = await Promise.all([
-    fetchRelatedProductsOnce(product.id, product.categoryId),
-    fetchReviewsOnce(product.id),
-  ]);
-
-  return (
-    <ProductDetails
-      product={product}
-      relatedProducts={relatedProducts}
-      reviews={reviews}
-    />
-  );
+  return <ProductPageClient slug={slug} />;
 }

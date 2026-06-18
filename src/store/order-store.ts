@@ -7,17 +7,21 @@ import type { Order, PaymentMethod } from "@/types";
 import { getFirestore } from "@/lib/firebase/config";
 import {
   isRecoverableFirestoreError,
+  markFirestoreAvailable,
   markFirestoreUnavailable,
   shouldAttemptFirestore,
 } from "@/lib/firebase/firestore-utils";
 import { createOrderInFirestore } from "@/lib/firebase/services/product.service";
+import { cancelOrderDirectly } from "@/lib/firebase/services/order-request.service";
 import { generateOrderNumber } from "@/lib/utils";
+import { toast } from "sonner";
 
 const ORDERS_STORAGE_KEY = "myroach-orders";
 
 interface CreateOrderInput {
   userId?: string;
   customerEmail?: string;
+  customerPhone?: string;
   items: Order["items"];
   subtotal: number;
   shipping: number;
@@ -36,6 +40,8 @@ interface OrderStore {
   getOrderById: (id: string) => Order | undefined;
   getOrdersForUser: (userId?: string) => Order[];
   syncFromFirestore: (userId: string) => Promise<void>;
+  cancelOrder: (orderId: string) => Promise<void>;
+  patchOrderStatus: (orderId: string, status: Order["status"]) => void;
 }
 
 function loadOrdersFromStorage(): Order[] {
@@ -91,6 +97,8 @@ export const useOrderStore = create<OrderStore>()(
           couponCode: input.couponCode,
           status: "confirmed",
           shippingAddress: input.shippingAddress,
+          customerEmail: input.customerEmail,
+          customerPhone: input.customerPhone,
           paymentStatus: "paid",
           paymentMethod: input.paymentMethod,
           createdAt: now,
@@ -102,12 +110,18 @@ export const useOrderStore = create<OrderStore>()(
         set({ orders });
 
         try {
-          if (shouldAttemptFirestore() && order.userId) {
+          if (!order.userId) {
+            toast.error("Sign in required — order saved on this device only.");
+            return order;
+          }
+          if (shouldAttemptFirestore()) {
             await createOrderInFirestore({
               id: order.id,
               userId: order.userId,
+              orderNumber: order.orderNumber,
               customerName: order.shippingAddress.fullName,
-              customerEmail: input.customerEmail || "",
+              customerEmail: input.customerEmail || order.shippingAddress.email || "",
+              customerPhone: input.customerPhone || order.shippingAddress.phone || "",
               items: order.items.map((i) => ({
                 productId: i.productId,
                 title: i.name,
@@ -121,25 +135,38 @@ export const useOrderStore = create<OrderStore>()(
               discount: order.discount,
               total: order.total,
               status: "pending",
-              paymentStatus: "paid",
+              paymentStatus: order.paymentMethod === "cod" ? "pending" : "paid",
               shippingAddress: {
                 name: order.shippingAddress.fullName,
-                email: "",
-                phone: "",
+                email: input.customerEmail || order.shippingAddress.email || "",
+                phone: input.customerPhone || order.shippingAddress.phone || "",
                 address: order.shippingAddress.street,
                 city: order.shippingAddress.city,
                 state: order.shippingAddress.state,
                 zip: order.shippingAddress.postalCode,
-                country: order.shippingAddress.country || "IN",
+                country: order.shippingAddress.country || "India",
               },
               couponCode: order.couponCode,
               paymentMethod: order.paymentMethod,
             });
+            markFirestoreAvailable();
           } else {
             await saveOrderToFirestore(order);
           }
-        } catch {
-          // Firestore sync is best-effort; localStorage remains source of truth offline
+        } catch (error) {
+          if (isRecoverableFirestoreError(error)) {
+            markFirestoreUnavailable();
+          }
+          console.error("[order] Firestore sync failed:", error);
+          toast.error(
+            "Order placed on this device, but admin may not see it yet. Check Firestore rules and try again.",
+            { duration: 8000 }
+          );
+          try {
+            await saveOrderToFirestore(order);
+          } catch {
+            /* local only */
+          }
         }
 
         return order;
@@ -165,9 +192,40 @@ export const useOrderStore = create<OrderStore>()(
             orderBy("createdAt", "desc")
           );
           const snapshot = await getDocs(q);
-          const firestoreOrders = snapshot.docs.map(
-            (d) => ({ id: d.id, ...d.data() }) as Order
-          );
+          const firestoreOrders = snapshot.docs.map((d) => {
+            const raw = d.data() as Record<string, unknown>;
+            const shipping = (raw.shippingAddress ?? {}) as Record<string, string>;
+            const local = loadOrdersFromStorage().find((o) => o.id === d.id);
+            return {
+              id: d.id,
+              ...raw,
+              orderNumber: (raw.orderNumber as string) || local?.orderNumber || d.id,
+              status: (raw.status as Order["status"]) || local?.status || "pending",
+              shipping:
+                typeof raw.shipping === "number"
+                  ? raw.shipping
+                  : typeof raw.shippingCharge === "number"
+                    ? raw.shippingCharge
+                    : local?.shipping ?? 0,
+              trackingNumber: (raw.trackingNumber as string) || local?.trackingNumber,
+              paymentStatus: (raw.paymentStatus as Order["paymentStatus"]) || local?.paymentStatus || "paid",
+              customerEmail: (raw.customerEmail as string) || shipping.email || "",
+              customerPhone: (raw.customerPhone as string) || shipping.phone || "",
+              shippingAddress: {
+                id: "addr-firestore",
+                label: "Shipping",
+                fullName: shipping.name || (raw.customerName as string) || "",
+                street: shipping.address || "",
+                city: shipping.city || "",
+                state: shipping.state || "",
+                postalCode: shipping.zip || "",
+                country: shipping.country || "India",
+                isDefault: false,
+                phone: shipping.phone || (raw.customerPhone as string) || "",
+                email: shipping.email || (raw.customerEmail as string) || "",
+              },
+            } as Order;
+          });
 
           const localOrders = loadOrdersFromStorage();
           const merged = new Map<string, Order>();
@@ -182,6 +240,25 @@ export const useOrderStore = create<OrderStore>()(
             markFirestoreUnavailable();
           }
         }
+      },
+
+      cancelOrder: async (orderId) => {
+        await cancelOrderDirectly(orderId);
+        const now = new Date().toISOString();
+        const orders = get().orders.map((o) =>
+          o.id === orderId ? { ...o, status: "cancelled" as const, updatedAt: now } : o
+        );
+        saveOrdersToStorage(orders);
+        set({ orders });
+      },
+
+      patchOrderStatus: (orderId, status) => {
+        const now = new Date().toISOString();
+        const orders = get().orders.map((o) =>
+          o.id === orderId ? { ...o, status, updatedAt: now } : o
+        );
+        saveOrdersToStorage(orders);
+        set({ orders });
       },
     }),
     {

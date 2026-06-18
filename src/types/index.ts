@@ -22,7 +22,11 @@ export interface Address {
   postalCode: string;
   country: string;
   isDefault: boolean;
+  phone?: string;
+  email?: string;
 }
+
+export type CatalogGender = "male" | "female" | "unisex";
 
 export interface Category {
   id: string;
@@ -30,6 +34,7 @@ export interface Category {
   slug: string;
   description?: string;
   image?: string;
+  gender?: CatalogGender;
   parentId?: string;
   order: number;
   isActive: boolean;
@@ -54,10 +59,13 @@ export interface Product {
   compareAtPrice?: number;
   categoryId: string;
   categorySlug: string;
+  gender?: CatalogGender;
   images: string[];
   variants: ProductVariant[];
   tags: string[];
   isFeatured: boolean;
+  /** Seconds this product stays visible in the featured carousel (admin). */
+  featuredDisplaySeconds?: number;
   isNewArrival: boolean;
   isBestSeller: boolean;
   rating: number;
@@ -65,6 +73,9 @@ export interface Product {
   sku: string;
   material?: string;
   careInstructions?: string;
+  minOrderQty?: number;
+  maxOrderQty?: number;
+  returnPolicy?: string;
   isActive: boolean;
   /** Total units in stock (from admin `stock` or sum of variant stock). */
   stock?: number;
@@ -82,6 +93,8 @@ export interface CartItem {
   size: string;
   color: string;
   colorHex: string;
+  minOrderQty?: number;
+  maxOrderQty?: number;
 }
 
 export interface Cart {
@@ -111,7 +124,8 @@ export type OrderStatus =
   | "processing"
   | "shipped"
   | "delivered"
-  | "cancelled";
+  | "cancelled"
+  | "refunded";
 
 export interface OrderItem {
   productId: string;
@@ -137,6 +151,9 @@ export interface Order {
   couponCode?: string;
   status: OrderStatus;
   shippingAddress: Address;
+  customerEmail?: string;
+  customerPhone?: string;
+  trackingNumber?: string;
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
   paymentMethod?: PaymentMethod;
   createdAt: string;

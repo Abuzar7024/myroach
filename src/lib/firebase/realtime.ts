@@ -8,8 +8,9 @@ import {
   type QueryConstraint,
   type Unsubscribe,
 } from "firebase/firestore";
-import { getFirestore } from "./config";
+import { getFirestore, getReadFirestore } from "./config";
 import { isMockDataMode } from "@/lib/config";
+import { markFirestoreAvailable } from "./firestore-utils";
 
 export type SnapshotHandler<T> = (data: T) => void;
 export type ErrorHandler = (error: Error) => void;
@@ -36,6 +37,7 @@ export function subscribeCollection<T>(
   return onSnapshot(
     q,
     (snapshot) => {
+      markFirestoreAvailable();
       const items = snapshot.docs.map((d) => mapDoc(d.id, d.data() as Record<string, unknown>));
       onData(items);
     },
@@ -64,6 +66,7 @@ export function subscribeDocument<T>(
   return onSnapshot(
     doc(db, collectionPath, docId),
     (snapshot) => {
+      markFirestoreAvailable();
       if (!snapshot.exists()) {
         onData(null);
         return;

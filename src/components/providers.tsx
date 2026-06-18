@@ -1,22 +1,19 @@
 "use client";
 
 import { AuthProvider } from "@/contexts/auth-context";
-import { Toaster } from "sonner";
+import { EmailVerificationGate } from "@/components/auth/email-verification-gate";
+import { WelcomeSplash } from "@/components/auth/welcome-splash";
+import { AppToaster } from "@/components/ui/app-toaster";
+import { LiveSyncNotifier } from "@/components/providers/live-sync-notifier";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       {children}
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          style: {
-            background: "#0d0d12",
-            color: "#f0f0f5",
-            border: "1px solid rgba(0, 240, 255, 0.35)",
-          },
-        }}
-      />
+      <EmailVerificationGate />
+      <WelcomeSplash />
+      <LiveSyncNotifier />
+      <AppToaster />
     </AuthProvider>
   );
 }

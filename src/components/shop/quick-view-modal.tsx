@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart-store";
-import { useRequireAuth } from "@/hooks/use-require-auth";
 import { AddToCartDialog } from "@/components/shop/add-to-cart-dialog";
 
 interface QuickViewModalProps {
@@ -18,7 +17,6 @@ interface QuickViewModalProps {
 }
 
 export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) {
-  const { requireAuth } = useRequireAuth();
   const addItem = useCartStore((s) => s.addItem);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
@@ -30,25 +28,23 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
   const sizes = variant?.sizes || [];
 
   const handleAddToCart = () => {
-    requireAuth(() => {
-      const color = selectedColor || product.variants[0].color;
-      const size = selectedSize || product.variants[0].sizes[0];
-      const colorVariant = product.variants.find((v) => v.color === color)!;
+    const color = selectedColor || product.variants[0].color;
+    const size = selectedSize || product.variants[0].sizes[0];
+    const colorVariant = product.variants.find((v) => v.color === color)!;
 
-      addItem({
-        productId: product.id,
-        slug: product.slug,
-        name: product.name,
-        image: product.images[0],
-        price: product.price,
-        quantity: 1,
-        size,
-        color,
-        colorHex: colorVariant.colorHex,
-      });
-      onClose();
-      setCartDialogOpen(true);
+    addItem({
+      productId: product.id,
+      slug: product.slug,
+      name: product.name,
+      image: product.images[0],
+      price: product.price,
+      quantity: 1,
+      size,
+      color,
+      colorHex: colorVariant.colorHex,
     });
+    onClose();
+    setCartDialogOpen(true);
   };
 
   return (
@@ -65,6 +61,7 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
                 src={product.images[0]}
                 alt={product.name}
                 fill
+                unoptimized={product.images[0]?.startsWith("data:")}
                 className="object-cover"
                 sizes="400px"
               />

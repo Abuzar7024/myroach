@@ -1,7 +1,7 @@
 import { subscribeCollection } from "../realtime";
 import { mapCategory } from "../mappers";
 import { COLLECTIONS } from "../models";
-import { getFirestore } from "../config";
+import { getReadFirestore } from "../config";
 import { isMockDataMode } from "@/lib/config";
 import { collection, getDocs } from "firebase/firestore";
 import type { Category } from "@/types";
@@ -25,7 +25,7 @@ export async function fetchCategoriesOnce(): Promise<Category[]> {
     const { categories } = await import("@/data/mock-data");
     return categories.filter((c) => c.isActive);
   }
-  const db = getFirestore();
+  const db = getReadFirestore();
   if (!db) return [];
   const snap = await getDocs(collection(db, COLLECTIONS.CATEGORIES));
   return snap.docs
