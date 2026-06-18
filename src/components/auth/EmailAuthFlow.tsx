@@ -11,6 +11,7 @@ import {
   RETURN_URL_KEY,
   verificationWaitingRoomPath,
 } from "@/lib/auth-utils";
+import { mapFirebaseAuthError } from "@/lib/firebase-auth-errors";
 import { toast } from "sonner";
 
 interface EmailAuthFlowProps {
@@ -48,11 +49,11 @@ export function EmailAuthFlow({ mode = "login", onSuccess }: EmailAuthFlowProps)
         }
         const result = await signUpWithEmail(email.trim(), password, name.trim());
         if (result.needsVerification) {
-          toast.success("Check your email — verification link sent (check spam too)");
+          toast.success("Account created — check your email for the verification link (spam too)");
           router.push(verificationWaitingRoomPath(pendingReturn));
           return;
         }
-        toast.success("Account created — welcome to the rotation");
+        toast.success("Account created");
       } else {
         const result = await signInWithEmail(email.trim(), password);
         if (result.needsVerification) {
@@ -64,12 +65,7 @@ export function EmailAuthFlow({ mode = "login", onSuccess }: EmailAuthFlowProps)
       }
       onSuccess?.();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : "Authentication failed";
-      if (msg === "ADMIN_USE_PANEL") {
-        toast.error("Admin accounts sign in at the admin panel, not the store");
-        return;
-      }
-      toast.error(msg.includes("auth/") ? "Invalid email or password" : msg);
+      toast.error(mapFirebaseAuthError(error));
     } finally {
       setLoading(false);
     }

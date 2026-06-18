@@ -36,6 +36,7 @@ import {
   TEST_PHONE,
 } from "@/lib/auth-utils";
 import { getEmailVerificationContinueUrl } from "@/lib/auth-email-action";
+import { mapFirebaseAuthError } from "@/lib/firebase-auth-errors";
 import type { Address, User } from "@/types";
 
 export interface RegistrationAddress {
@@ -385,10 +386,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sendVerificationEmail = async () => {
     const auth = getAuth();
     if (!auth?.currentUser) throw new Error("Not signed in");
-    await sendEmailVerification(auth.currentUser, {
-      url: getEmailVerificationContinueUrl(),
-      handleCodeInApp: true,
-    });
+    try {
+      await sendEmailVerification(auth.currentUser, {
+        url: getEmailVerificationContinueUrl(),
+        handleCodeInApp: true,
+      });
+    } catch (error) {
+      throw new Error(mapFirebaseAuthError(error));
+    }
   };
 
   const completeEmailVerificationLink = async (oobCode: string) => {
@@ -467,8 +472,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const auth = getAuth();
     const db = getFirestore();
     if (!auth) throw new Error("Firebase Auth is not configured");
-    const cred = await signInWithEmailAndPassword(auth, email, password);
+
+    let cred;
+    try {
+      cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+    } catch (error) {
+      throw new Error(mapFirebaseAuthError(error));
+    }
+
     markStorefrontSession(cred.user.uid);
+    setFirebaseUser(cred.user);
 
     if (db && shouldAttemptFirestore()) {
       try {
@@ -498,22 +511,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const auth = getAuth();
     const db = getFirestore();
     if (!auth || !db) throw new Error("Firebase is not configured");
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+    let cred;
+    try {
+      cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    } catch (error) {
+      throw new Error(mapFirebaseAuthError(error));
+    }
+
     markStorefrontSession(cred.user.uid);
-    await sendEmailVerification(cred.user, {
-      url: getEmailVerificationContinueUrl(),
-      handleCodeInApp: true,
-    });
-    setPendingDisplayName(name);
-    await setDoc(doc(db, "users", cred.user.uid), {
-      name,
-      email,
-      role: "customer",
-      active: true,
-      addresses: [],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    setFirebaseUser(cred.user);
+    setPendingDisplayName(name.trim());
+
+    try {
+      await setDoc(doc(db, "users", cred.user.uid), {
+        name: name.trim(),
+        email: email.trim(),
+        role: "customer",
+        active: true,
+        addresses: [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      await signOut(auth);
+      clearStorefrontSession();
+      setFirebaseUser(null);
+      setPendingDisplayName(null);
+      throw new Error(mapFirebaseAuthError(error));
+    }
+
+    try {
+      await sendEmailVerification(cred.user, {
+        url: getEmailVerificationContinueUrl(),
+        handleCodeInApp: true,
+      });
+    } catch (error) {
+      console.error("[auth] sendEmailVerification failed:", error);
+      // Account + profile saved — waiting room can resend.
+    }
+
     return { needsVerification: true };
   };
 

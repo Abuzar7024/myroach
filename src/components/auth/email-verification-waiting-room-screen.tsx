@@ -66,7 +66,7 @@ export function EmailVerificationWaitingRoomScreen() {
       await sendVerificationEmail();
       toast.success("Verification link sent — check your inbox (and spam)");
     } catch {
-      toast.error("Could not send email — try again in a minute");
+      toast.error("Could not send email — check Firebase authorized domains and try again in a minute");
     } finally {
       setSending(false);
     }
