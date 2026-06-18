@@ -12,6 +12,7 @@ import {
   normalizePhoneDigits,
 } from "@/lib/auth-utils";
 import { toast } from "sonner";
+import { PincodeAddressFields } from "@/components/address/pincode-address-fields";
 
 type Step = "phone" | "otp" | "name" | "address";
 
@@ -118,6 +119,18 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
           <Label htmlFor="addr-phone">Phone</Label>
           <Input id="addr-phone" value={formattedPhone} disabled className="mt-2 opacity-70" />
         </div>
+        <PincodeAddressFields
+          pincode={pincode}
+          city={city}
+          state={state}
+          onPincodeChange={setPincode}
+          onCityChange={setCity}
+          onStateChange={setState}
+          pincodeId="addr-pincode"
+          cityId="addr-city"
+          stateId="addr-state"
+          showCountry={false}
+        />
         <div>
           <Label htmlFor="addr-line1">Address Line 1</Label>
           <Input
@@ -140,42 +153,6 @@ export function PhoneAuthFlow({ mode = "login", onSuccess }: PhoneAuthFlowProps)
             onChange={(e) => setLine2(e.target.value)}
             className="mt-2"
             placeholder="Landmark, area"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="addr-city">City</Label>
-            <Input
-              id="addr-city"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              required
-              className="mt-2"
-            />
-          </div>
-          <div>
-            <Label htmlFor="addr-state">State</Label>
-            <Input
-              id="addr-state"
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-              required
-              className="mt-2"
-              placeholder="MH"
-            />
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="addr-pincode">Pincode</Label>
-          <Input
-            id="addr-pincode"
-            inputMode="numeric"
-            maxLength={6}
-            value={pincode}
-            onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            required
-            className="mt-2"
-            placeholder="400001"
           />
         </div>
         <Button type="submit" className="w-full" loading={loading}>

@@ -23,17 +23,26 @@ export default function AccountLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, logout } = useAuth();
+  const isVerifyRoute = pathname.startsWith("/account/verify");
+  const { user, firebaseUser, loading, logout } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !(isVerifyRoute && firebaseUser)) {
       storeReturnUrl(pathname);
       router.replace(loginRedirectPath(pathname));
     }
-  }, [loading, user, router, pathname]);
+  }, [loading, user, firebaseUser, isVerifyRoute, router, pathname]);
 
   if (loading) {
     return <PageLoader label="Loading account" fullPage className="pt-20" />;
+  }
+
+  if (!user && !(isVerifyRoute && firebaseUser)) {
+    return <PageLoader label="Redirecting to login" fullPage className="pt-20" />;
+  }
+
+  if (isVerifyRoute) {
+    return <div className="pt-0">{children}</div>;
   }
 
   if (!user) {

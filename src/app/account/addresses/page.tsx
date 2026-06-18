@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { FadeIn } from "@/components/ui/motion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +9,7 @@ import { useAuth } from "@/contexts/auth-context";
 import type { Address } from "@/types";
 import { toast } from "sonner";
 import Link from "next/link";
+import { PincodeAddressFields } from "@/components/address/pincode-address-fields";
 
 function createAddressId() {
   return `addr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -15,6 +17,18 @@ function createAddressId() {
 
 export default function AddressesPage() {
   const { user, updateUserProfile } = useAuth();
+  const [label, setLabel] = useState("Home");
+  const [fullName, setFullName] = useState("");
+  const [street, setStreet] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [country, setCountry] = useState("India");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user?.displayName) setFullName(user.displayName);
+  }, [user?.displayName]);
 
   if (!user) {
     return (
@@ -39,28 +53,36 @@ export default function AddressesPage() {
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.currentTarget;
-    const data = new FormData(form);
 
     const newAddress: Address = {
       id: createAddressId(),
-      label: String(data.get("label") || "Home"),
-      fullName: String(data.get("fullName") || user.displayName),
-      street: String(data.get("street") || ""),
-      city: String(data.get("city") || ""),
-      state: String(data.get("state") || "MH"),
-      postalCode: String(data.get("postal") || ""),
-      country: String(data.get("country") || "India"),
+      label: label.trim() || "Home",
+      fullName: fullName.trim() || user.displayName,
+      street: street.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      postalCode: pincode.trim(),
+      country: country.trim() || "India",
       isDefault: addresses.length === 0,
     };
 
     if (!newAddress.street || !newAddress.city || !newAddress.postalCode) {
-      toast.error("Fill in street, city, and postal code");
+      toast.error("Enter pincode, street, and wait for city to load");
       return;
     }
 
-    await saveAddresses([...addresses, newAddress]);
-    form.reset();
+    setSaving(true);
+    try {
+      await saveAddresses([...addresses, newAddress]);
+      setLabel("Home");
+      setStreet("");
+      setPincode("");
+      setCity("");
+      setState("");
+      setCountry("India");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -153,42 +175,50 @@ export default function AddressesPage() {
         <h3 className="text-sm font-medium">Add New Address</h3>
         <div>
           <Label htmlFor="label">Label</Label>
-          <Input id="label" name="label" placeholder="Home, Office..." className="mt-2" />
+          <Input
+            id="label"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Home, Office..."
+            className="mt-2"
+          />
         </div>
         <div>
           <Label htmlFor="fullName">Full Name</Label>
           <Input
             id="fullName"
-            name="fullName"
-            defaultValue={user.displayName}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
             className="mt-2"
           />
         </div>
+        <PincodeAddressFields
+          pincode={pincode}
+          city={city}
+          state={state}
+          country={country}
+          onPincodeChange={setPincode}
+          onCityChange={setCity}
+          onStateChange={setState}
+          onCountryChange={setCountry}
+          pincodeId="postal"
+          cityId="city"
+          stateId="state"
+          countryId="country"
+        />
         <div>
           <Label htmlFor="street">Street</Label>
-          <Input id="street" name="street" required className="mt-2" />
+          <Input
+            id="street"
+            value={street}
+            onChange={(e) => setStreet(e.target.value)}
+            required
+            className="mt-2"
+          />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="city">City</Label>
-            <Input id="city" name="city" required className="mt-2" />
-          </div>
-          <div>
-            <Label htmlFor="postal">Postal Code</Label>
-            <Input id="postal" name="postal" required className="mt-2" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="state">State</Label>
-            <Input id="state" name="state" defaultValue="MH" className="mt-2" />
-          </div>
-          <div>
-            <Label htmlFor="country">Country</Label>
-            <Input id="country" name="country" defaultValue="India" className="mt-2" />
-          </div>
-        </div>
-        <Button type="submit">Save Address</Button>
+        <Button type="submit" loading={saving}>
+          Save Address
+        </Button>
       </form>
     </FadeIn>
   );

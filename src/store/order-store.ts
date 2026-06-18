@@ -12,7 +12,7 @@ import {
   shouldAttemptFirestore,
 } from "@/lib/firebase/firestore-utils";
 import { createOrderInFirestore } from "@/lib/firebase/services/product.service";
-import { cancelOrderDirectly } from "@/lib/firebase/services/order-request.service";
+import { mapOrderFromFirestore } from "@/lib/firebase/services/order.service";
 import { generateOrderNumber } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -40,7 +40,6 @@ interface OrderStore {
   getOrderById: (id: string) => Order | undefined;
   getOrdersForUser: (userId?: string) => Order[];
   syncFromFirestore: (userId: string) => Promise<void>;
-  cancelOrder: (orderId: string) => Promise<void>;
   patchOrderStatus: (orderId: string, status: Order["status"]) => void;
 }
 
@@ -192,40 +191,9 @@ export const useOrderStore = create<OrderStore>()(
             orderBy("createdAt", "desc")
           );
           const snapshot = await getDocs(q);
-          const firestoreOrders = snapshot.docs.map((d) => {
-            const raw = d.data() as Record<string, unknown>;
-            const shipping = (raw.shippingAddress ?? {}) as Record<string, string>;
-            const local = loadOrdersFromStorage().find((o) => o.id === d.id);
-            return {
-              id: d.id,
-              ...raw,
-              orderNumber: (raw.orderNumber as string) || local?.orderNumber || d.id,
-              status: (raw.status as Order["status"]) || local?.status || "pending",
-              shipping:
-                typeof raw.shipping === "number"
-                  ? raw.shipping
-                  : typeof raw.shippingCharge === "number"
-                    ? raw.shippingCharge
-                    : local?.shipping ?? 0,
-              trackingNumber: (raw.trackingNumber as string) || local?.trackingNumber,
-              paymentStatus: (raw.paymentStatus as Order["paymentStatus"]) || local?.paymentStatus || "paid",
-              customerEmail: (raw.customerEmail as string) || shipping.email || "",
-              customerPhone: (raw.customerPhone as string) || shipping.phone || "",
-              shippingAddress: {
-                id: "addr-firestore",
-                label: "Shipping",
-                fullName: shipping.name || (raw.customerName as string) || "",
-                street: shipping.address || "",
-                city: shipping.city || "",
-                state: shipping.state || "",
-                postalCode: shipping.zip || "",
-                country: shipping.country || "India",
-                isDefault: false,
-                phone: shipping.phone || (raw.customerPhone as string) || "",
-                email: shipping.email || (raw.customerEmail as string) || "",
-              },
-            } as Order;
-          });
+          const firestoreOrders = snapshot.docs.map((d) =>
+            mapOrderFromFirestore(d.id, d.data() as Record<string, unknown>)
+          );
 
           const localOrders = loadOrdersFromStorage();
           const merged = new Map<string, Order>();
@@ -240,16 +208,6 @@ export const useOrderStore = create<OrderStore>()(
             markFirestoreUnavailable();
           }
         }
-      },
-
-      cancelOrder: async (orderId) => {
-        await cancelOrderDirectly(orderId);
-        const now = new Date().toISOString();
-        const orders = get().orders.map((o) =>
-          o.id === orderId ? { ...o, status: "cancelled" as const, updatedAt: now } : o
-        );
-        saveOrdersToStorage(orders);
-        set({ orders });
       },
 
       patchOrderStatus: (orderId, status) => {

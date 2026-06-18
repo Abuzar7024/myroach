@@ -127,6 +127,14 @@ export type OrderStatus =
   | "cancelled"
   | "refunded";
 
+export interface OrderStatusUpdate {
+  status: OrderStatus;
+  at: string;
+  by: "admin" | "system" | "customer";
+  note?: string;
+  trackingNumber?: string;
+}
+
 export interface OrderItem {
   productId: string;
   name: string;
@@ -154,6 +162,7 @@ export interface Order {
   customerEmail?: string;
   customerPhone?: string;
   trackingNumber?: string;
+  statusHistory?: OrderStatusUpdate[];
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
   paymentMethod?: PaymentMethod;
   createdAt: string;

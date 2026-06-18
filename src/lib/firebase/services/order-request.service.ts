@@ -5,7 +5,6 @@ import {
   onSnapshot,
   query,
   setDoc,
-  updateDoc,
   where,
   serverTimestamp,
   Timestamp,
@@ -13,7 +12,12 @@ import {
 import { getFirestore } from "@/lib/firebase/config";
 import { shouldAttemptFirestore } from "@/lib/firebase/firestore-utils";
 import type { Order } from "@/types";
-import type { OrderRequest, OrderRequestType, OrderResponseTemplateKey } from "@/lib/order-request";
+import {
+  normalizeRequestType,
+  type OrderRequest,
+  type OrderRequestType,
+  type OrderResponseTemplateKey,
+} from "@/lib/order-request";
 
 const COL = "orderRequests";
 
@@ -27,12 +31,15 @@ function fromFirestore(id: string, data: Record<string, unknown>): OrderRequest 
     customerName: String(data.customerName ?? ""),
     customerEmail: data.customerEmail != null ? String(data.customerEmail) : undefined,
     orderTotal: typeof data.orderTotal === "number" ? data.orderTotal : 0,
-    type: (data.type as OrderRequestType) ?? "cancel",
+    type: normalizeRequestType(data.type),
     status: (data.status as OrderRequest["status"]) ?? "pending",
     reason: String(data.reason ?? ""),
+    exchangeDetails:
+      data.exchangeDetails != null ? String(data.exchangeDetails) : undefined,
+    policyAccepted: data.policyAccepted === true,
     adminResponse: admin
       ? {
-          templateKey: String(admin.templateKey ?? "cancel_approved") as OrderResponseTemplateKey,
+          templateKey: String(admin.templateKey ?? "refund_processing") as OrderResponseTemplateKey,
           message: String(admin.message ?? ""),
           refundDays: typeof admin.refundDays === "number" ? admin.refundDays : undefined,
           customNote: admin.customNote != null ? String(admin.customNote) : undefined,
@@ -53,41 +60,36 @@ function fromFirestore(id: string, data: Record<string, unknown>): OrderRequest 
   };
 }
 
-export async function cancelOrderDirectly(orderId: string): Promise<void> {
-  if (!shouldAttemptFirestore()) throw new Error("Firestore unavailable");
-  const db = getFirestore();
-  if (!db) throw new Error("Firestore not initialized");
-
-  await updateDoc(doc(db, "orders", orderId), {
-    status: "cancelled",
-    cancelledAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-}
-
-export async function submitOrderRequest(
+export async function submitCancellationRequest(
   order: Order,
   userId: string,
   type: OrderRequestType,
-  reason: string
+  reason: string,
+  exchangeDetails?: string
 ): Promise<string> {
   if (!shouldAttemptFirestore()) throw new Error("Firestore unavailable");
   const db = getFirestore();
   if (!db) throw new Error("Firestore not initialized");
 
   const trimmed = reason.trim();
-  if (trimmed.length < 10) throw new Error("Please describe your reason in at least 10 characters.");
+  if (trimmed.length < 10) {
+    throw new Error("Please describe your request in at least 10 characters.");
+  }
+
+  if (type === "exchange" && !exchangeDetails?.trim()) {
+    throw new Error("Tell us what you want to exchange for (size, color, or product).");
+  }
 
   const existing = await getDocs(query(collection(db, COL), where("orderId", "==", order.id)));
   const hasPending = existing.docs.some(
     (d) => d.data().userId === userId && d.data().status === "pending"
   );
   if (hasPending) {
-    throw new Error("You already have a pending request for this order.");
+    throw new Error("You already have a request processing for this order.");
   }
 
   const id = `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  await setDoc(doc(db, COL, id), {
+  const payload: Record<string, unknown> = {
     orderId: order.id,
     orderNumber: order.orderNumber,
     userId,
@@ -97,10 +99,26 @@ export async function submitOrderRequest(
     type,
     status: "pending",
     reason: trimmed,
+    policyAccepted: true,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  });
+  };
+  if (type === "exchange" && exchangeDetails?.trim()) {
+    payload.exchangeDetails = exchangeDetails.trim();
+  }
+
+  await setDoc(doc(db, COL, id), payload);
   return id;
+}
+
+/** @deprecated Use submitCancellationRequest */
+export async function submitOrderRequest(
+  order: Order,
+  userId: string,
+  type: OrderRequestType,
+  reason: string
+): Promise<string> {
+  return submitCancellationRequest(order, userId, type, reason);
 }
 
 export function subscribeUserOrderRequests(

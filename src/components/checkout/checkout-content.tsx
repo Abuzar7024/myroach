@@ -22,6 +22,7 @@ import {
   getProfileGaps,
 } from "@/lib/checkout-profile";
 import { toast } from "sonner";
+import { PincodeAddressFields } from "@/components/address/pincode-address-fields";
 
 const checkoutSchema = z.object({
   firstName: z.string().min(1, "Required"),
@@ -123,6 +124,8 @@ export function CheckoutContent() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<CheckoutForm>({
     resolver: zodResolver(checkoutSchema),
@@ -252,6 +255,29 @@ export function CheckoutContent() {
                   )}
                 </div>
                 <div className="sm:col-span-2">
+                  <PincodeAddressFields
+                    pincode={watch("postalCode") || ""}
+                    city={watch("city") || ""}
+                    state={watch("state") || ""}
+                    country={watch("country") || "India"}
+                    onPincodeChange={(value) =>
+                      setValue("postalCode", value, { shouldValidate: true, shouldDirty: true })
+                    }
+                    onCityChange={(value) =>
+                      setValue("city", value, { shouldValidate: true, shouldDirty: true })
+                    }
+                    onStateChange={(value) =>
+                      setValue("state", value, { shouldValidate: true, shouldDirty: true })
+                    }
+                    onCountryChange={(value) =>
+                      setValue("country", value, { shouldValidate: true, shouldDirty: true })
+                    }
+                    pincodeError={errors.postalCode?.message}
+                    cityError={errors.city?.message}
+                    stateError={errors.state?.message}
+                  />
+                </div>
+                <div className="sm:col-span-2">
                   <Label htmlFor="street">Street Address</Label>
                   <Input
                     id="street"
@@ -262,54 +288,6 @@ export function CheckoutContent() {
                   {errors.street && (
                     <p className="mt-1 text-xs text-red-500">{errors.street.message}</p>
                   )}
-                </div>
-                <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    autoComplete="address-level2"
-                    {...register("city")}
-                    className="mt-2"
-                  />
-                  {errors.city && (
-                    <p className="mt-1 text-xs text-red-500">{errors.city.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    autoComplete="address-level1"
-                    {...register("state")}
-                    className="mt-2"
-                  />
-                  {errors.state && (
-                    <p className="mt-1 text-xs text-red-500">{errors.state.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="postalCode">Pincode</Label>
-                  <Input
-                    id="postalCode"
-                    inputMode="numeric"
-                    autoComplete="postal-code"
-                    {...register("postalCode")}
-                    className="mt-2"
-                    placeholder="400050"
-                  />
-                  {errors.postalCode && (
-                    <p className="mt-1 text-xs text-red-500">{errors.postalCode.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="country">Country</Label>
-                  <Input
-                    id="country"
-                    autoComplete="country-name"
-                    defaultValue="India"
-                    {...register("country")}
-                    className="mt-2"
-                  />
                 </div>
               </div>
             </section>

@@ -208,6 +208,14 @@ export async function createOrderInFirestore(order: {
     shippingAddress: order.shippingAddress,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+    statusHistory: [
+      {
+        status: order.status,
+        at: serverTimestamp(),
+        by: "system",
+        note: "Order placed on the storefront.",
+      },
+    ],
   };
   if (order.customerPhone) docData.customerPhone = order.customerPhone;
   if (order.couponCode) docData.couponCode = order.couponCode;

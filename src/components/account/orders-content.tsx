@@ -3,65 +3,30 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, MessageSquare, Package, Truck, XCircle } from "lucide-react";
-import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
-import { useOrderStore } from "@/store/order-store";
+import { useOrders } from "@/hooks/use-orders";
+import { OrderTrackingTimeline } from "@/components/account/order-tracking-timeline";
 import { PageLoader } from "@/components/ui/page-loader";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { formatPrice } from "@/lib/format";
 import {
-  canCancelOrderDirectly,
-  canRequestCancel,
-  canRequestRefund,
+  canSubmitCancellationRequest,
+  requestStatusLabel,
   requestTypeLabel,
   type OrderRequest,
 } from "@/lib/order-request";
-import {
-  submitOrderRequest,
-  subscribeUserOrderRequests,
-} from "@/lib/firebase/services/order-request.service";
+import { subscribeUserOrderRequests } from "@/lib/firebase/services/order-request.service";
 
 function statusLabel(status: string) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
-function requestStatusLabel(status: OrderRequest["status"]) {
-  if (status === "pending") return "Under review";
-  if (status === "approved") return "Approved";
-  return "Declined";
-}
-
 export function OrdersContent() {
   const { user } = useAuth();
-  const orders = useOrderStore((s) => s.orders);
-  const hydrated = useOrderStore((s) => s.hydrated);
-  const syncFromFirestore = useOrderStore((s) => s.syncFromFirestore);
-  const cancelOrder = useOrderStore((s) => s.cancelOrder);
-  const getOrdersForUser = useOrderStore((s) => s.getOrdersForUser);
+  const { orders: userOrders, hydrated } = useOrders();
 
   const [requests, setRequests] = useState<OrderRequest[]>([]);
   const [requestsReady, setRequestsReady] = useState(false);
-  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
-  const [requestTarget, setRequestTarget] = useState<{
-    orderId: string;
-    type: "cancel" | "refund";
-  } | null>(null);
-  const [reason, setReason] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (user?.id) {
-      syncFromFirestore(user.id);
-    }
-  }, [user?.id, syncFromFirestore]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -81,12 +46,6 @@ export function OrdersContent() {
     return unsub;
   }, [user?.id]);
 
-  useEffect(() => {
-    if (user?.id && requests.some((r) => r.status !== "pending")) {
-      syncFromFirestore(user.id);
-    }
-  }, [requests, user?.id, syncFromFirestore]);
-
   const requestsByOrder = useMemo(() => {
     const map = new Map<string, OrderRequest[]>();
     requests.forEach((r) => {
@@ -101,47 +60,11 @@ export function OrdersContent() {
     return <PageLoader label="Loading orders" />;
   }
 
-  const userOrders = getOrdersForUser(user?.id);
-
-  const handleDirectCancel = async () => {
-    if (!cancelTarget) return;
-    setSubmitting(true);
-    try {
-      await cancelOrder(cancelTarget);
-      toast.success("Order cancelled");
-      setCancelTarget(null);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not cancel order");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleSubmitRequest = async () => {
-    if (!requestTarget || !user?.id || reason.trim().length < 10) return;
-    const order = userOrders.find((o) => o.id === requestTarget.orderId);
-    if (!order) return;
-
-    setSubmitting(true);
-    try {
-      await submitOrderRequest(order, user.id, requestTarget.type, reason);
-      toast.success(
-        `${requestTypeLabel(requestTarget.type)} request submitted — we'll update you here`
-      );
-      setRequestTarget(null);
-      setReason("");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not submit request");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <div>
       <h2 className="font-display text-2xl font-light">Order History</h2>
       <p className="mt-2 text-sm text-noire-muted">
-        Track orders, cancel before dispatch, or request a refund. Admin replies appear below each order.
+        Track orders live, cancel with refund or exchange, and see admin replies here.
       </p>
 
       {userOrders.length === 0 ? (
@@ -164,11 +87,7 @@ export function OrdersContent() {
             const orderRequests = requestsByOrder.get(order.id) ?? [];
             const pendingRequest = orderRequests.find((r) => r.status === "pending");
             const latestResponse = orderRequests.find((r) => r.adminResponse);
-
-            const showDirectCancel = canCancelOrderDirectly(order.status) && !pendingRequest;
-            const showCancelRequest = canRequestCancel(order.status) && !pendingRequest;
-            const showRefundRequest =
-              canRequestRefund(order.status, order.paymentStatus) && !pendingRequest;
+            const canCancel = canSubmitCancellationRequest(order.status) && !pendingRequest;
 
             return (
               <article key={order.id} className="rounded-lg border border-noire-border p-5 sm:p-6">
@@ -183,8 +102,16 @@ export function OrdersContent() {
                   <div className="text-right">
                     <p className="text-sm font-medium">{formatPrice(order.total)}</p>
                     <p className="text-xs capitalize text-accent-cyan">{statusLabel(order.status)}</p>
+                    <Link
+                      href={`/account/orders/${order.id}`}
+                      className="mt-2 inline-block text-xs text-accent-cyan hover:underline"
+                    >
+                      Track order
+                    </Link>
                   </div>
                 </div>
+
+                <OrderTrackingTimeline order={order} compact />
 
                 <div className="mt-4 grid gap-4 border-t border-noire-border pt-4 text-sm sm:grid-cols-2">
                   <div>
@@ -225,7 +152,7 @@ export function OrdersContent() {
                         <>
                           <p className="font-medium">Shipped — tracking update coming soon</p>
                           <p className="mt-1 text-cyan-100/80">
-                            Your package has left our warehouse. We&apos;ll add the courier tracking number here shortly.
+                            Your package has left our warehouse.
                           </p>
                         </>
                       )}
@@ -238,9 +165,21 @@ export function OrdersContent() {
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                     <div>
                       <p className="font-medium">
-                        {requestTypeLabel(pendingRequest.type)} request — {requestStatusLabel(pendingRequest.status)}
+                        {requestTypeLabel(pendingRequest.type)} request —{" "}
+                        {requestStatusLabel(pendingRequest.status)}
                       </p>
                       <p className="mt-1 text-amber-100/80">{pendingRequest.reason}</p>
+                      {pendingRequest.exchangeDetails ? (
+                        <p className="mt-1 text-amber-100/70">
+                          Exchange for: {pendingRequest.exchangeDetails}
+                        </p>
+                      ) : null}
+                      <Link
+                        href={`/account/orders/${order.id}/cancel`}
+                        className="mt-2 inline-block text-xs text-accent-cyan hover:underline"
+                      >
+                        View request status
+                      </Link>
                     </div>
                   </div>
                 )}
@@ -258,43 +197,14 @@ export function OrdersContent() {
                   </div>
                 )}
 
-                {(showDirectCancel || showCancelRequest || showRefundRequest) && (
-                  <div className="mt-4 flex flex-wrap gap-2 border-t border-noire-border pt-4">
-                    {showDirectCancel && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-red-500/40 text-red-300 hover:bg-red-500/10"
-                        onClick={() => setCancelTarget(order.id)}
-                      >
+                {canCancel && (
+                  <div className="mt-4 border-t border-noire-border pt-4">
+                    <Button asChild variant="outline" size="sm" className="border-red-500/40 text-red-300 hover:bg-red-500/10">
+                      <Link href={`/account/orders/${order.id}/cancel`}>
                         <XCircle className="mr-1.5 h-3.5 w-3.5" />
-                        Cancel order
-                      </Button>
-                    )}
-                    {showCancelRequest && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setRequestTarget({ orderId: order.id, type: "cancel" });
-                          setReason("");
-                        }}
-                      >
-                        Request cancellation
-                      </Button>
-                    )}
-                    {showRefundRequest && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setRequestTarget({ orderId: order.id, type: "refund" });
-                          setReason("");
-                        }}
-                      >
-                        Request refund
-                      </Button>
-                    )}
+                        Cancel order — refund or exchange
+                      </Link>
+                    </Button>
                   </div>
                 )}
 
@@ -309,74 +219,6 @@ export function OrdersContent() {
           })}
         </div>
       )}
-
-      <Dialog open={!!cancelTarget} onOpenChange={(open) => !open && !submitting && setCancelTarget(null)}>
-        <DialogContent className="border-accent-cyan/30">
-          <DialogHeader>
-            <DialogTitle>Cancel this order?</DialogTitle>
-            <DialogDescription>
-              Your order has not shipped yet. This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button variant="outline" onClick={() => setCancelTarget(null)} disabled={submitting}>
-              Keep order
-            </Button>
-            <Button
-              variant="drip"
-              onClick={handleDirectCancel}
-              disabled={submitting}
-            >
-              {submitting ? "Cancelling..." : "Yes, cancel order"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={!!requestTarget}
-        onOpenChange={(open) => {
-          if (!open && !submitting) {
-            setRequestTarget(null);
-            setReason("");
-          }
-        }}
-      >
-        <DialogContent className="border-accent-cyan/30">
-          <DialogHeader>
-            <DialogTitle>
-              {requestTarget
-                ? `Submit ${requestTypeLabel(requestTarget.type).toLowerCase()} request`
-                : "Submit request"}
-            </DialogTitle>
-            <DialogDescription>
-              Tell us why you need this — our team will review and reply on this page.
-            </DialogDescription>
-          </DialogHeader>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Describe your reason (min. 10 characters)..."
-            rows={4}
-            className="w-full rounded-md border border-noire-border bg-noire-charcoal px-3 py-2 text-sm text-zinc-100 placeholder:text-noire-muted focus:border-accent-cyan focus:outline-none"
-          />
-          <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setRequestTarget(null);
-                setReason("");
-              }}
-              disabled={submitting}
-            >
-              Back
-            </Button>
-            <Button onClick={handleSubmitRequest} disabled={submitting || reason.trim().length < 10}>
-              {submitting ? "Submitting..." : "Submit request"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

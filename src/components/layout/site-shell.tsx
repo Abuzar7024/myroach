@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { isVerificationWaitingRoomPath } from "@/lib/auth-utils";
 
 const WelcomeDialog = dynamic(
   () => import("@/components/layout/welcome-dialog").then((m) => m.WelcomeDialog),
@@ -14,9 +15,16 @@ const WelcomeDialog = dynamic(
 export function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
+  const isWaitingRoom = isVerificationWaitingRoomPath(pathname);
 
   if (isAdmin) {
     return <>{children}</>;
+  }
+
+  if (isWaitingRoom) {
+    return (
+      <main className="flex min-h-screen flex-1 items-stretch bg-background">{children}</main>
+    );
   }
 
   return (

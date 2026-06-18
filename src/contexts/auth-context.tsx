@@ -13,8 +13,9 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  applyActionCode,
   setPersistence,
-  browserSessionPersistence,
+  browserLocalPersistence,
   type User as FirebaseUser,
   type Auth,
 } from "firebase/auth";
@@ -34,6 +35,7 @@ import {
   TEST_OTP,
   TEST_PHONE,
 } from "@/lib/auth-utils";
+import { getEmailVerificationContinueUrl } from "@/lib/auth-email-action";
 import type { Address, User } from "@/types";
 
 export interface RegistrationAddress {
@@ -62,6 +64,7 @@ interface AuthContextType {
   signUpWithEmail: (email: string, password: string, name: string) => Promise<{ needsVerification: boolean }>;
   sendVerificationEmail: () => Promise<void>;
   checkEmailVerified: () => Promise<boolean>;
+  completeEmailVerificationLink: (oobCode: string) => Promise<void>;
   dismissWelcomeSplash: () => void;
   completeTestRegistration: (name: string, address: RegistrationAddress) => Promise<void>;
   updateUserProfile: (data: Partial<User>) => Promise<void>;
@@ -77,24 +80,24 @@ const STOREFRONT_AUTH_KEY = "myroach-storefront-auth";
 
 function markStorefrontSession(uid: string) {
   if (typeof window !== "undefined") {
-    sessionStorage.setItem(STOREFRONT_AUTH_KEY, uid);
+    localStorage.setItem(STOREFRONT_AUTH_KEY, uid);
   }
 }
 
 function clearStorefrontSession() {
   if (typeof window !== "undefined") {
-    sessionStorage.removeItem(STOREFRONT_AUTH_KEY);
+    localStorage.removeItem(STOREFRONT_AUTH_KEY);
   }
 }
 
 function getStorefrontSessionUid(): string | null {
   if (typeof window === "undefined") return null;
-  return sessionStorage.getItem(STOREFRONT_AUTH_KEY);
+  return localStorage.getItem(STOREFRONT_AUTH_KEY);
 }
 
 async function ensureStorefrontPersistence(auth: Auth) {
   try {
-    await setPersistence(auth, browserSessionPersistence);
+    await setPersistence(auth, browserLocalPersistence);
   } catch {
     /* already set */
   }
@@ -102,7 +105,12 @@ async function ensureStorefrontPersistence(auth: Auth) {
 
 async function signOutIfNotStorefrontSession(auth: Auth, fbUser: FirebaseUser | null): Promise<boolean> {
   if (!fbUser) return false;
-  if (getStorefrontSessionUid() !== fbUser.uid) {
+  const stored = getStorefrontSessionUid();
+  if (!stored) {
+    markStorefrontSession(fbUser.uid);
+    return false;
+  }
+  if (stored !== fbUser.uid) {
     await signOut(auth);
     return true;
   }
@@ -111,27 +119,27 @@ async function signOutIfNotStorefrontSession(auth: Auth, fbUser: FirebaseUser | 
 
 function saveTestSession(user: User) {
   if (typeof window !== "undefined") {
-    sessionStorage.setItem(TEST_AUTH_KEY, JSON.stringify(user));
+    localStorage.setItem(TEST_AUTH_KEY, JSON.stringify(user));
   }
 }
 
 function loadTestSession(): User | null {
   if (typeof window === "undefined") return null;
 
-  const raw = sessionStorage.getItem(TEST_AUTH_KEY);
+  const raw = localStorage.getItem(TEST_AUTH_KEY);
   if (!raw) return null;
 
   try {
     return JSON.parse(raw) as User;
   } catch {
-    sessionStorage.removeItem(TEST_AUTH_KEY);
+    localStorage.removeItem(TEST_AUTH_KEY);
     return null;
   }
 }
 
 function clearTestSession() {
   if (typeof window !== "undefined") {
-    sessionStorage.removeItem(TEST_AUTH_KEY);
+    localStorage.removeItem(TEST_AUTH_KEY);
   }
 }
 
@@ -377,7 +385,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sendVerificationEmail = async () => {
     const auth = getAuth();
     if (!auth?.currentUser) throw new Error("Not signed in");
-    await sendEmailVerification(auth.currentUser);
+    await sendEmailVerification(auth.currentUser, {
+      url: getEmailVerificationContinueUrl(),
+      handleCodeInApp: true,
+    });
+  };
+
+  const completeEmailVerificationLink = async (oobCode: string) => {
+    const auth = getAuth();
+    const db = getFirestore();
+    if (!auth) throw new Error("Firebase Auth is not configured");
+
+    await applyActionCode(auth, oobCode);
+
+    if (auth.currentUser) {
+      markStorefrontSession(auth.currentUser.uid);
+      await auth.currentUser.reload();
+      setFirebaseUser(auth.currentUser);
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(`myroach-welcome-${auth.currentUser.uid}`, "pending");
+      }
+
+      if (db && shouldAttemptFirestore()) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+          if (userDoc.exists()) {
+            const mapped = mapUser(auth.currentUser.uid, userDoc.data() as Record<string, unknown>);
+            setUser(mapped);
+            setPendingDisplayName(mapped.displayName);
+            triggerWelcomeIfNeeded(auth.currentUser, mapped.displayName);
+            return;
+          }
+        } catch (error) {
+          if (isRecoverableFirestoreError(error)) markFirestoreUnavailable();
+        }
+      }
+
+      const local = buildLocalUser(auth.currentUser, { displayName: pendingDisplayName ?? undefined });
+      setUser(local);
+      triggerWelcomeIfNeeded(auth.currentUser, local.displayName);
+    }
   };
 
   const checkEmailVerified = async (): Promise<boolean> => {
@@ -452,7 +500,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth || !db) throw new Error("Firebase is not configured");
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     markStorefrontSession(cred.user.uid);
-    await sendEmailVerification(cred.user);
+    await sendEmailVerification(cred.user, {
+      url: getEmailVerificationContinueUrl(),
+      handleCodeInApp: true,
+    });
     setPendingDisplayName(name);
     await setDoc(doc(db, "users", cred.user.uid), {
       name,
@@ -553,6 +604,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUpWithEmail,
         sendVerificationEmail,
         checkEmailVerified,
+        completeEmailVerificationLink,
         dismissWelcomeSplash,
         completeTestRegistration,
         updateUserProfile,

@@ -1,6 +1,7 @@
 /** App config from env — shared by Firebase layer and UI. */
 
 export function isMockDataMode(): boolean {
+  if (process.env.NODE_ENV === "production") return false;
   return process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 }
 

@@ -1,10 +1,16 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
+import {
+  peekVerificationReturnUrl,
+  RETURN_URL_KEY,
+  verificationWaitingRoomPath,
+} from "@/lib/auth-utils";
 import { toast } from "sonner";
 
 interface EmailAuthFlowProps {
@@ -13,6 +19,7 @@ interface EmailAuthFlowProps {
 }
 
 export function EmailAuthFlow({ mode = "login", onSuccess }: EmailAuthFlowProps) {
+  const router = useRouter();
   const { signInWithEmail, signUpWithEmail } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,6 +33,11 @@ export function EmailAuthFlow({ mode = "login", onSuccess }: EmailAuthFlowProps)
       return;
     }
 
+    const pendingReturn =
+      typeof window !== "undefined"
+        ? peekVerificationReturnUrl(sessionStorage.getItem(RETURN_URL_KEY) || "/shop")
+        : "/shop";
+
     setLoading(true);
     try {
       if (mode === "register") {
@@ -37,6 +49,7 @@ export function EmailAuthFlow({ mode = "login", onSuccess }: EmailAuthFlowProps)
         const result = await signUpWithEmail(email.trim(), password, name.trim());
         if (result.needsVerification) {
           toast.success("Check your email — verification link sent (check spam too)");
+          router.push(verificationWaitingRoomPath(pendingReturn));
           return;
         }
         toast.success("Account created — welcome to the rotation");
@@ -44,6 +57,7 @@ export function EmailAuthFlow({ mode = "login", onSuccess }: EmailAuthFlowProps)
         const result = await signInWithEmail(email.trim(), password);
         if (result.needsVerification) {
           toast.info("Verify your email first — check inbox and spam");
+          router.push(verificationWaitingRoomPath(pendingReturn));
           return;
         }
         toast.success("Signed in successfully");

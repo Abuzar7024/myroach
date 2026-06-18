@@ -6,30 +6,30 @@ import { useAuth } from "@/contexts/auth-context";
 import { CheckoutContent } from "@/components/checkout/checkout-content";
 import { CheckoutSignInPrompt } from "@/components/checkout/checkout-sign-in-prompt";
 import { PageLoader } from "@/components/ui/page-loader";
-import { storeReturnUrl } from "@/lib/auth-utils";
+import { storeReturnUrl, verificationWaitingRoomPath } from "@/lib/auth-utils";
 
 export function CheckoutAuthWrapper() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading, needsEmailVerification } = useAuth();
+  const { firebaseUser, loading, needsEmailVerification } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !firebaseUser) {
       storeReturnUrl(pathname);
     }
-  }, [loading, user, pathname]);
+  }, [loading, firebaseUser, pathname]);
 
   useEffect(() => {
-    if (!loading && user && needsEmailVerification) {
-      router.replace(`/account/verify?redirect=${encodeURIComponent(pathname)}`);
+    if (!loading && firebaseUser && needsEmailVerification) {
+      router.replace(verificationWaitingRoomPath(pathname));
     }
-  }, [loading, user, needsEmailVerification, router, pathname]);
+  }, [loading, firebaseUser, needsEmailVerification, router, pathname]);
 
   if (loading) {
     return <PageLoader label="Loading checkout" fullPage className="pt-20" />;
   }
 
-  if (!user) {
+  if (!firebaseUser) {
     return <CheckoutSignInPrompt returnPath={pathname} />;
   }
 
