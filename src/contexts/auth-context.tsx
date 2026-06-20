@@ -21,6 +21,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth, getFirestore, isFirebaseConfigured } from "@/lib/firebase/config";
+import { ensureAppCheckReady } from "@/lib/firebase/app-check";
 import { mapUser } from "@/lib/firebase/mappers";
 import { isMockDataMode } from "@/lib/config";
 import {
@@ -386,6 +387,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sendVerificationEmail = async () => {
     const auth = getAuth();
     if (!auth?.currentUser) throw new Error("Not signed in");
+    await ensureAppCheckReady();
     try {
       await sendEmailVerification(auth.currentUser, {
         url: getEmailVerificationContinueUrl(),
@@ -523,6 +525,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setFirebaseUser(cred.user);
     setPendingDisplayName(name.trim());
 
+    await ensureAppCheckReady();
+
     try {
       await setDoc(doc(db, "users", cred.user.uid), {
         name: name.trim(),
@@ -534,10 +538,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updatedAt: serverTimestamp(),
       });
     } catch (error) {
-      await signOut(auth);
-      clearStorefrontSession();
-      setFirebaseUser(null);
-      setPendingDisplayName(null);
+      console.error("[auth] customer profile create failed:", error);
       throw new Error(mapFirebaseAuthError(error));
     }
 
