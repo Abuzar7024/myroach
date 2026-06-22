@@ -49,7 +49,13 @@ export function EmailAuthFlow({ mode = "login", onSuccess }: EmailAuthFlowProps)
         }
         const result = await signUpWithEmail(email.trim(), password, name.trim());
         if (result.needsVerification) {
-          toast.success("Account created — check your email for the verification link (spam too)");
+          if (result.verificationEmailSent) {
+            toast.success("Account created — check your email for the verification link (spam too)");
+          } else {
+            toast.message("Account created — sending verification email…", {
+              description: "If nothing arrives in a minute, use Resend on the next screen.",
+            });
+          }
           router.push(verificationWaitingRoomPath(pendingReturn));
           return;
         }

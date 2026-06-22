@@ -10,6 +10,11 @@ import {
   peekVerificationReturnUrl,
   storeVerificationReturnUrl,
 } from "@/lib/auth-utils";
+import {
+  getEmailVerificationContinueUrl,
+  wasVerificationEmailSent,
+} from "@/lib/auth-email-action";
+import { mapFirebaseAuthError } from "@/lib/firebase-auth-errors";
 import { toast } from "sonner";
 import { Clock, Mail, RefreshCw } from "lucide-react";
 
@@ -43,6 +48,17 @@ export function EmailVerificationWaitingRoomScreen() {
   useEffect(() => {
     if (loading || !needsEmailVerification || !firebaseUser) return;
 
+    if (!wasVerificationEmailSent(firebaseUser.uid)) {
+      void (async () => {
+        try {
+          await sendVerificationEmail();
+          toast.success("Verification link sent — check your inbox (and spam)");
+        } catch (error) {
+          toast.error(mapFirebaseAuthError(error));
+        }
+      })();
+    }
+
     const poll = window.setInterval(async () => {
       try {
         const verified = await checkEmailVerified();
@@ -55,7 +71,7 @@ export function EmailVerificationWaitingRoomScreen() {
     }, 4000);
 
     return () => window.clearInterval(poll);
-  }, [loading, needsEmailVerification, firebaseUser, checkEmailVerified, router]);
+  }, [loading, needsEmailVerification, firebaseUser, checkEmailVerified, router, sendVerificationEmail]);
 
   const displayName = pendingDisplayName || firebaseUser?.email?.split("@")[0] || "there";
   const returnLabel = describeReturnPath(returnPath);
@@ -65,8 +81,8 @@ export function EmailVerificationWaitingRoomScreen() {
     try {
       await sendVerificationEmail();
       toast.success("Verification link sent — check your inbox (and spam)");
-    } catch {
-      toast.error("Could not send email — check Firebase authorized domains and try again in a minute");
+    } catch (error) {
+      toast.error(mapFirebaseAuthError(error));
     } finally {
       setSending(false);
     }
@@ -135,6 +151,10 @@ export function EmailVerificationWaitingRoomScreen() {
         </p>
         <p className="mt-4 rounded-sm border border-accent-pink/30 bg-accent-pink/5 px-4 py-3 text-xs text-accent-pink">
           <strong>Check spam / junk</strong> if the email isn&apos;t in your inbox yet.
+        </p>
+        <p className="mt-3 text-xs text-noire-muted">
+          Verification links open{" "}
+          <span className="font-mono text-noire-white">{getEmailVerificationContinueUrl()}</span>
         </p>
 
         <div className="mt-8 flex flex-col gap-3">

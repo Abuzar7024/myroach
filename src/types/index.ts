@@ -165,6 +165,8 @@ export interface Order {
   statusHistory?: OrderStatusUpdate[];
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
   paymentMethod?: PaymentMethod;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { User } from "lucide-react";
 
 const MOBILE_EXTRA_LINKS = [
   { href: "/account/wishlist", label: "Wishlist" },
@@ -78,11 +79,9 @@ export function Header() {
     <>
       <header
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-[background-color,padding,border-color] duration-300",
-          "pt-[env(safe-area-inset-top,0px)]",
-          isScrolled
-            ? "border-b border-accent-cyan/30 bg-noire-charcoal/95 py-2 neon-glow lg:py-3"
-            : "bg-noire-black/90 py-2.5 lg:bg-transparent lg:py-5 lg:backdrop-blur-none"
+          "fixed top-0 left-0 right-0 z-50 border-b border-accent-cyan/40 bg-noire-charcoal shadow-[0_4px_20px_rgba(0,0,0,0.55)] transition-[box-shadow,padding] duration-300",
+          "pt-[env(safe-area-inset-top,0px)] backdrop-blur-md",
+          isScrolled ? "py-2 shadow-[0_6px_28px_rgba(0,0,0,0.65)] lg:py-2.5" : "py-2.5 lg:py-3"
         )}
         style={{ paddingLeft: "env(safe-area-inset-left, 0px)", paddingRight: "env(safe-area-inset-right, 0px)" }}
       >
@@ -104,7 +103,7 @@ export function Header() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-xs font-semibold uppercase tracking-[0.15em] text-noire-white/80 transition-colors hover:text-accent-cyan"
+                className="text-xs font-semibold uppercase tracking-[0.15em] text-noire-white transition-colors hover:text-accent-cyan"
               >
                 {link.label}
               </Link>
@@ -127,32 +126,37 @@ export function Header() {
             </span>
           </Link>
 
-          {/* Desktop: search + account + cart; Mobile: search only (bottom nav handles rest) */}
-          <div className="flex items-center justify-end gap-2 text-noire-white lg:gap-5">
+          {/* Search + account / login */}
+          <div className="flex items-center justify-end gap-2 text-noire-white sm:gap-3 lg:gap-4">
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
               aria-label="Search products"
-              className="flex h-11 w-11 items-center justify-center active:text-accent-cyan"
+              className="flex h-10 w-10 items-center justify-center rounded-md border border-noire-border/80 bg-noire-black/40 transition-colors hover:border-accent-cyan/50 hover:text-accent-cyan sm:h-11 sm:w-11"
             >
               <Search className="h-5 w-5" />
             </button>
-            <Link
-              href={user ? "/account" : "/login"}
-              aria-label={user ? "Account" : "Login"}
-              className="hidden h-11 items-center gap-2 text-xs font-medium uppercase tracking-wider transition-colors hover:text-accent-cyan lg:flex"
-            >
-              {user ? (
-                <>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full border border-accent-cyan/50 bg-noire-charcoal text-[10px] font-bold text-accent-cyan">
-                    {(user.displayName || user.phone || "U").charAt(0).toUpperCase()}
-                  </span>
-                  <span>{user.displayName?.split(" ")[0] || "Account"}</span>
-                </>
-              ) : (
-                "Login"
-              )}
-            </Link>
+            {user ? (
+              <Link
+                href="/account"
+                aria-label="Account"
+                className="flex h-10 items-center gap-2 rounded-md border border-accent-cyan/40 bg-noire-black/40 px-2.5 text-xs font-semibold uppercase tracking-wider transition-colors hover:border-accent-cyan hover:text-accent-cyan sm:h-11 sm:px-3 lg:gap-2.5"
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-accent-cyan/60 bg-noire-charcoal text-[10px] font-bold text-accent-cyan">
+                  {(user.displayName || user.phone || user.email || "U").charAt(0).toUpperCase()}
+                </span>
+                <span className="hidden max-w-[7rem] truncate sm:inline">
+                  {user.displayName?.split(" ")[0] || "Account"}
+                </span>
+              </Link>
+            ) : (
+              <Button asChild size="sm" variant="default" className="h-10 px-4 text-[11px] sm:h-11 sm:px-5 sm:text-xs">
+                <Link href="/login" className="gap-1.5">
+                  <User className="h-4 w-4" />
+                  <span>Sign In</span>
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -218,13 +222,12 @@ export function Header() {
                     </button>
                   </>
                 ) : (
-                  <Link
-                    href="/login"
-                    onClick={() => setIsMobileOpen(false)}
-                    className="block py-3 text-base font-semibold uppercase tracking-wider text-accent-cyan"
-                  >
-                    Sign In
-                  </Link>
+                  <Button asChild className="w-full" size="lg">
+                    <Link href="/login" onClick={() => setIsMobileOpen(false)}>
+                      <User className="h-4 w-4" />
+                      Sign In
+                    </Link>
+                  </Button>
                 )}
               </div>
               <p className="mt-auto pt-8 text-xs text-noire-muted">

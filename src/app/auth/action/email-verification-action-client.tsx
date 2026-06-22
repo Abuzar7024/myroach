@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FadeIn } from "@/components/ui/motion";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
+import { parseEmailActionSearchParams } from "@/lib/auth-email-action";
 import {
   describeReturnPath,
   getAndClearVerificationReturnUrl,
@@ -23,12 +24,14 @@ export default function EmailVerificationActionPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [returnPath, setReturnPath] = useState("/shop");
 
+  const { mode, oobCode } = useMemo(
+    () => parseEmailActionSearchParams(searchParams),
+    [searchParams]
+  );
+
   useEffect(() => {
     setReturnPath(peekVerificationReturnUrl("/shop"));
   }, []);
-
-  const mode = searchParams.get("mode");
-  const oobCode = searchParams.get("oobCode");
 
   useEffect(() => {
     if (mode !== "verifyEmail" || !oobCode) {
@@ -124,20 +127,28 @@ export default function EmailVerificationActionPage() {
         <CheckCircle2 className="mx-auto h-12 w-12 text-accent-cyan" />
         <h1 className="font-display mt-6 text-3xl text-accent-cyan">Email verified</h1>
         <p className="mt-3 text-sm leading-relaxed text-noire-muted">
-          You&apos;re in — your email is confirmed. Taking you back to {returnLabel}…
+          {firebaseUser
+            ? `You're in — taking you back to ${returnLabel}…`
+            : "Your email is confirmed. Sign in on this device to continue shopping."}
         </p>
         {firebaseUser?.email ? (
           <p className="mt-2 text-sm text-accent-cyan">{firebaseUser.email}</p>
         ) : (
-          <p className="mt-2 text-sm text-noire-muted">Sign in with the same email to continue.</p>
+          <p className="mt-2 text-sm text-noire-muted">Use the same email and password you signed up with.</p>
         )}
         <div className="mt-8 flex flex-col gap-3">
-          <Button
-            className="w-full"
-            onClick={() => router.replace(getAndClearVerificationReturnUrl("/shop"))}
-          >
-            Continue now
-          </Button>
+          {firebaseUser ? (
+            <Button
+              className="w-full"
+              onClick={() => router.replace(getAndClearVerificationReturnUrl("/shop"))}
+            >
+              Continue now
+            </Button>
+          ) : (
+            <Button asChild className="w-full">
+              <Link href="/login">Sign in</Link>
+            </Button>
+          )}
         </div>
       </div>
     </FadeIn>

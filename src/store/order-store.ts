@@ -30,6 +30,9 @@ interface CreateOrderInput {
   couponCode?: string;
   shippingAddress: Order["shippingAddress"];
   paymentMethod: PaymentMethod;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  paymentStatus?: Order["paymentStatus"];
 }
 
 interface OrderStore {
@@ -98,8 +101,12 @@ export const useOrderStore = create<OrderStore>()(
           shippingAddress: input.shippingAddress,
           customerEmail: input.customerEmail,
           customerPhone: input.customerPhone,
-          paymentStatus: input.paymentMethod === "cod" ? "pending" : "paid",
+          paymentStatus:
+            input.paymentStatus ??
+            (input.paymentMethod === "cod" ? "pending" : "paid"),
           paymentMethod: input.paymentMethod,
+          razorpayOrderId: input.razorpayOrderId,
+          razorpayPaymentId: input.razorpayPaymentId,
           createdAt: now,
           updatedAt: now,
         };
@@ -136,7 +143,7 @@ export const useOrderStore = create<OrderStore>()(
               discount: order.discount,
               total: order.total,
               status: "pending",
-              paymentStatus: order.paymentMethod === "cod" ? "pending" : "paid",
+              paymentStatus: order.paymentStatus,
               shippingAddress: {
                 name: order.shippingAddress.fullName,
                 email: input.customerEmail || order.shippingAddress.email || "",
@@ -149,6 +156,8 @@ export const useOrderStore = create<OrderStore>()(
               },
               couponCode: order.couponCode,
               paymentMethod: order.paymentMethod,
+              razorpayOrderId: order.razorpayOrderId,
+              razorpayPaymentId: order.razorpayPaymentId,
             });
             markFirestoreAvailable();
           } else {

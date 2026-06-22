@@ -49,6 +49,7 @@ export const COLLECTIONS = {
   REVIEWS: "reviews",
   SUBSCRIBERS: "subscribers",
   SETTINGS: "settings",
+  RAZORPAY_EVENTS: "razorpay_events",
 } as const;
 
 export const SETTINGS_DOCS = {

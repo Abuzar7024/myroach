@@ -27,6 +27,12 @@ export function mapFirebaseAuthError(error: unknown): string {
     case "auth/invalid-continue-uri":
     case "auth/unauthorized-continue-uri":
       return "Verification link misconfigured. Add this site URL to Firebase → Authentication → Authorized domains.";
+    case "auth/invalid-action-code":
+      return "This verification link is invalid or was already used. Request a new verification email.";
+    case "auth/expired-action-code":
+      return "This verification link has expired. Request a new verification email.";
+    case "auth/user-disabled":
+      return "This account has been disabled. Contact support.";
     case "permission-denied":
       return "Could not save your profile (Firestore blocked). Check App Check / Firestore rules for this project.";
     case "app-check/app-check-token-error":

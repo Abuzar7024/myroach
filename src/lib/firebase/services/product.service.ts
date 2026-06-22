@@ -196,6 +196,8 @@ export async function createOrderInFirestore(order: {
   couponCode?: string;
   paymentMethod?: string;
   orderNumber?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
 }) {
   const db = getFirestore();
   if (!db) throw new Error("Firestore unavailable");
@@ -229,6 +231,8 @@ export async function createOrderInFirestore(order: {
   if (order.couponCode) docData.couponCode = order.couponCode;
   if (order.paymentMethod) docData.paymentMethod = order.paymentMethod;
   if (order.orderNumber) docData.orderNumber = order.orderNumber;
+  if (order.razorpayOrderId) docData.razorpayOrderId = order.razorpayOrderId;
+  if (order.razorpayPaymentId) docData.razorpayPaymentId = order.razorpayPaymentId;
 
   await setDoc(doc(db, COLLECTIONS.ORDERS, order.id), docData);
 

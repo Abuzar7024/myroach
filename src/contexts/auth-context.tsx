@@ -36,7 +36,10 @@ import {
   TEST_OTP,
   TEST_PHONE,
 } from "@/lib/auth-utils";
-import { getEmailVerificationContinueUrl } from "@/lib/auth-email-action";
+import {
+  getEmailVerificationContinueUrl,
+  markVerificationEmailSent,
+} from "@/lib/auth-email-action";
 import { mapFirebaseAuthError } from "@/lib/firebase-auth-errors";
 import type { Address, User } from "@/types";
 
@@ -63,7 +66,11 @@ interface AuthContextType {
     options?: { forRegistration?: boolean }
   ) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<{ needsVerification: boolean }>;
-  signUpWithEmail: (email: string, password: string, name: string) => Promise<{ needsVerification: boolean }>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    name: string
+  ) => Promise<{ needsVerification: boolean; verificationEmailSent: boolean }>;
   sendVerificationEmail: () => Promise<void>;
   checkEmailVerified: () => Promise<boolean>;
   completeEmailVerificationLink: (oobCode: string) => Promise<void>;
@@ -393,6 +400,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         url: getEmailVerificationContinueUrl(),
         handleCodeInApp: true,
       });
+      markVerificationEmailSent(auth.currentUser.uid);
     } catch (error) {
       throw new Error(mapFirebaseAuthError(error));
     }
@@ -403,7 +411,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const db = getFirestore();
     if (!auth) throw new Error("Firebase Auth is not configured");
 
-    await applyActionCode(auth, oobCode);
+    await ensureAppCheckReady();
+
+    try {
+      await applyActionCode(auth, oobCode);
+    } catch (error) {
+      throw new Error(mapFirebaseAuthError(error));
+    }
 
     if (auth.currentUser) {
       markStorefrontSession(auth.currentUser.uid);
@@ -542,17 +556,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(mapFirebaseAuthError(error));
     }
 
+    let verificationEmailSent = false;
     try {
       await sendEmailVerification(cred.user, {
         url: getEmailVerificationContinueUrl(),
         handleCodeInApp: true,
       });
+      verificationEmailSent = true;
+      markVerificationEmailSent(cred.user.uid);
     } catch (error) {
       console.error("[auth] sendEmailVerification failed:", error);
-      // Account + profile saved — waiting room can resend.
     }
 
-    return { needsVerification: true };
+    return { needsVerification: true, verificationEmailSent };
   };
 
   const signInWithTestCredentials = async (
