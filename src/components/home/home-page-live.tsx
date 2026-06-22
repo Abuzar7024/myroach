@@ -18,6 +18,8 @@ import { useBanners } from "@/hooks/use-banners";
 import { useHomepage } from "@/hooks/use-homepage";
 import { useSettings } from "@/hooks/use-settings";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ShoppingBrandHero, ShopTrustStrip } from "@/components/home/shopping-brand-hero";
+import { CategoryQuickLinks } from "@/components/home/category-quick-links";
 
 export function HomePageLive() {
   const { products, loading: productsLoading } = useProducts();
@@ -69,6 +71,9 @@ export function HomePageLive() {
 
   const hasPromoCopy = Boolean(homepage.promoTitle?.trim() || homepage.promoSubtitle?.trim());
 
+  const hasBanners = banners.some((b) => b.image);
+  const showProductHero = !bannersLoading && !hasBanners && products.length > 0;
+
   const initialLoad =
     (productsLoading || categoriesLoading || bannersLoading || homepageLoading) &&
     products.length === 0 &&
@@ -85,11 +90,25 @@ export function HomePageLive() {
 
   return (
     <>
-      <SplitScreenHero
-        banners={banners}
-        featuredProducts={heroProducts}
-        loading={bannersLoading}
-      />
+      {showProductHero ? (
+        <ShoppingBrandHero
+          products={latestProducts.length > 0 ? latestProducts : products}
+          storeName={settings.storeName}
+          freeShippingThreshold={settings.freeShippingThreshold}
+        />
+      ) : (
+        <SplitScreenHero
+          banners={banners}
+          featuredProducts={heroProducts}
+          loading={bannersLoading}
+        />
+      )}
+
+      <ShopTrustStrip freeShippingThreshold={settings.freeShippingThreshold} />
+
+      {categories.filter((c) => c.isActive && c.image).length > 0 && (
+        <CategoryQuickLinks categories={categories} />
+      )}
 
       {homepage.showFeaturedProducts === true && (
         <FeaturedProducts
