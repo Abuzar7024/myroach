@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { Orbitron, Rajdhani } from "next/font/google";
 import { SiteShell } from "@/components/layout/site-shell";
 import { Providers } from "@/components/providers";
-import { AppCheckDebug } from "@/components/firebase/app-check-debug";
 import { SITE_NAME, SITE_DESCRIPTION, SITE_URL } from "@/lib/constants";
-import { isMockDataMode } from "@/lib/firebase/config";
 import "./globals.css";
 
 const orbitron = Orbitron({
@@ -46,12 +44,6 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const appCheckDebugToken =
-    !isMockDataMode() &&
-    process.env.NODE_ENV === "development"
-      ? process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN
-      : undefined;
-
   return (
     <html
       lang="en"
@@ -62,7 +54,6 @@ export default function RootLayout({
         className="min-h-full flex flex-col antialiased cyber-grid text-foreground bg-background"
         suppressHydrationWarning
       >
-        {appCheckDebugToken ? <AppCheckDebug token={appCheckDebugToken} /> : null}
         <Providers>
           <SiteShell>{children}</SiteShell>
         </Providers>

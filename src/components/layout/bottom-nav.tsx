@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Home, ShoppingBag, Store, User } from "lucide-react";
 import { useCartStore } from "@/store/cart-store";
 import { useAuth } from "@/contexts/auth-context";
@@ -18,6 +19,11 @@ export function BottomNav() {
   const cartCount = useCartStore((s) => s.getItemCount());
   const { user, loading } = useAuth();
   const accountHref = user ? "/account" : "/login";
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <nav
@@ -41,7 +47,7 @@ export function BottomNav() {
             >
               <Icon className="h-5 w-5" aria-hidden="true" />
               <span>{label}</span>
-              {isCart && cartCount > 0 && (
+              {isCart && mounted && cartCount > 0 && (
                 <span className="absolute right-[calc(50%-22px)] top-1 flex h-4 min-w-4 items-center justify-center bg-accent-cyan px-0.5 text-[10px] font-bold text-noire-black">
                   {cartCount > 99 ? "99+" : cartCount}
                 </span>
