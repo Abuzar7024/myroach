@@ -7,6 +7,7 @@ import { Menu, X, Search, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useSettings } from "@/hooks/use-settings";
 import { SITE_NAME, NAV_LINKS } from "@/lib/constants";
+import { isPolicyRouteAvailable } from "@/lib/policies";
 import { PLACEHOLDER_PRODUCT_IMAGE } from "@/lib/config";
 import { cn } from "@/lib/utils";
 import {
@@ -36,6 +37,9 @@ export function Header() {
   const { user, logout } = useAuth();
   const { settings } = useSettings();
   const storeName = settings.storeName || SITE_NAME;
+  const mobileExtraLinks = MOBILE_EXTRA_LINKS.filter(
+    (link) => isPolicyRouteAvailable(link.href, settings)
+  );
 
   useEffect(() => {
     let ticking = false;
@@ -186,7 +190,7 @@ export function Header() {
                   {link.label}
                 </Link>
               ))}
-              {MOBILE_EXTRA_LINKS.map((link) => (
+              {mobileExtraLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}

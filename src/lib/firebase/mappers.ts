@@ -10,7 +10,6 @@ import { mergeFooterConfig, type FooterConfig } from "@/lib/footer-config";
 import {
   DEFAULT_MAX_ORDER_QTY,
   DEFAULT_MIN_ORDER_QTY,
-  DEFAULT_RETURN_POLICY,
 } from "@/lib/constants";
 import type { ProductVariant } from "@/types";
 
@@ -124,8 +123,7 @@ export function mapProduct(id: string, raw: RawDoc): Product {
     sku: str(raw.sku),
     minOrderQty: raw.minOrderQty != null ? num(raw.minOrderQty, DEFAULT_MIN_ORDER_QTY) : DEFAULT_MIN_ORDER_QTY,
     maxOrderQty: raw.maxOrderQty != null ? num(raw.maxOrderQty, DEFAULT_MAX_ORDER_QTY) : DEFAULT_MAX_ORDER_QTY,
-    returnPolicy:
-      raw.returnPolicy != null ? str(raw.returnPolicy) : DEFAULT_RETURN_POLICY,
+    returnPolicy: raw.returnPolicy != null ? str(raw.returnPolicy) : undefined,
     material: raw.material != null ? str(raw.material) : undefined,
     careInstructions: raw.careInstructions != null ? str(raw.careInstructions) : undefined,
     isActive: bool(raw.active, bool(raw.isActive, true)),

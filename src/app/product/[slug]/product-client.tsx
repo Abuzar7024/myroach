@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import { Heart, Minus, Plus, Star, Truck, RotateCcw } from "lucide-react";
 import type { Product, Review } from "@/types";
 import { formatPrice } from "@/lib/utils";
-import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
+import { getFreeShippingThreshold } from "@/lib/pricing-settings";
+import { getStorePolicy } from "@/lib/policies";
+import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/shop/product-card";
 import { FadeIn } from "@/components/ui/motion";
@@ -27,6 +29,10 @@ export function ProductClient({ product, reviews, related }: ProductClientProps)
   const [quantity, setQuantity] = useState(1);
   const [zoomed, setZoomed] = useState(false);
 
+  const { settings } = useSettings();
+  const freeShippingThreshold = getFreeShippingThreshold();
+  const hasFreeShippingOffer = Number.isFinite(freeShippingThreshold);
+  const returnLabel = product.returnPolicy || getStorePolicy(settings, "returnPolicy");
   const addItem = useCartStore((s) => s.addItem);
   const { addItem: addWishlist, removeItem: removeWishlist, isInWishlist } =
     useWishlistStore();
@@ -248,22 +254,27 @@ export function ProductClient({ product, reviews, related }: ProductClientProps)
                 </Button>
               </div>
 
-              {/* Shipping info */}
+              {(hasFreeShippingOffer || returnLabel) && (
               <div className="mt-10 space-y-3 border-t border-border pt-8">
-                <div className="flex items-center gap-3 text-sm text-muted">
-                  <Truck className="h-4 w-4 shrink-0" />
-                  <span>Complimentary shipping on orders over {formatPrice(FREE_SHIPPING_THRESHOLD)}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-muted">
-                  <RotateCcw className="h-4 w-4 shrink-0" />
-                  <span>Free returns within 30 days</span>
-                </div>
-                {product.material && (
-                  <p className="text-sm text-muted-foreground">
-                    Material: {product.material}
-                  </p>
+                {hasFreeShippingOffer && (
+                  <div className="flex items-center gap-3 text-sm text-muted">
+                    <Truck className="h-4 w-4 shrink-0" />
+                    <span>Complimentary shipping on orders over {formatPrice(freeShippingThreshold)}</span>
+                  </div>
+                )}
+                {returnLabel && (
+                  <div className="flex items-center gap-3 text-sm text-muted">
+                    <RotateCcw className="h-4 w-4 shrink-0" />
+                    <span>{returnLabel}</span>
+                  </div>
                 )}
               </div>
+              )}
+              {product.material && (
+                <p className="mt-6 text-sm text-muted-foreground">
+                  Material: {product.material}
+                </p>
+              )}
             </div>
           </FadeIn>
         </div>

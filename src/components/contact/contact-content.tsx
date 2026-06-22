@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { MapPin, Mail, Phone, Clock } from "lucide-react";
-import { SOCIAL } from "@/lib/constants";
+import { useSettings } from "@/hooks/use-settings";
 
 const contactSchema = z.object({
   name: z.string().min(1),
@@ -23,29 +23,24 @@ const contactSchema = z.object({
   message: z.string().min(10),
 });
 
-const faqs = [
-  {
-    q: "What is your return policy?",
-    a: "Returns are accepted for unused items with tags attached. See Shipping & Returns for full details.",
-  },
-  {
-    q: "How long does shipping take?",
-    a: "Standard shipping usually takes 5–7 business days. Express options may be available at checkout.",
-  },
-  {
-    q: "Do you ship across India?",
-    a: "Yes. We deliver across India. Shipping cost and free-shipping offers are shown at checkout.",
-  },
+const GENERAL_FAQS = [
   {
     q: "How can I track my order?",
     a: "Open My Account → Orders to see status and tracking once your order ships.",
   },
-];
+] as const;
 
 export function ContactContent() {
+  const { settings } = useSettings();
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(contactSchema),
   });
+
+  const contactRows = [
+    settings.address ? { icon: MapPin, text: settings.address } : null,
+    settings.contactEmail ? { icon: Mail, text: settings.contactEmail } : null,
+    settings.phone ? { icon: Phone, text: settings.phone } : null,
+  ].filter(Boolean) as Array<{ icon: typeof MapPin; text: string }>;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-32">
@@ -89,38 +84,33 @@ export function ContactContent() {
           </form>
         </div>
 
-        <div className="space-y-8">
-          <div className="space-y-4">
-            {[
-              { icon: MapPin, text: "420 Roach Lane, Bandra, Mumbai 400050" },
-              { icon: Mail, text: SOCIAL.email },
-              { icon: Phone, text: SOCIAL.phone },
-              { icon: Clock, text: "Mon–Sat: 11am – 9pm IST" },
-            ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-start gap-3">
-                <Icon className="mt-0.5 h-4 w-4 text-accent-cyan" />
-                <span className="text-sm">{text}</span>
-              </div>
-            ))}
+        {contactRows.length > 0 && (
+          <div className="space-y-8">
+            <div className="space-y-4">
+              {contactRows.map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-start gap-3">
+                  <Icon className="mt-0.5 h-4 w-4 text-accent-cyan" />
+                  <span className="text-sm">{text}</span>
+                </div>
+              ))}
+            </div>
           </div>
-
-          <div className="aspect-video bg-noire-cream flex items-center justify-center border border-noire-border">
-            <p className="text-sm text-noire-muted">Google Maps Placeholder</p>
-          </div>
-        </div>
+        )}
       </div>
 
-      <section id="faq" className="mt-20">
-        <h2 className="font-display mb-8 text-2xl font-light">Frequently Asked Questions</h2>
-        <Accordion type="single" collapsible className="max-w-2xl">
-          {faqs.map((faq, i) => (
-            <AccordionItem key={i} value={`faq-${i}`}>
-              <AccordionTrigger>{faq.q}</AccordionTrigger>
-              <AccordionContent>{faq.a}</AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </section>
+      {GENERAL_FAQS.length > 0 && (
+        <section id="faq" className="mt-20">
+          <h2 className="font-display mb-8 text-2xl font-light">Frequently Asked Questions</h2>
+          <Accordion type="single" collapsible className="max-w-2xl">
+            {GENERAL_FAQS.map((faq, i) => (
+              <AccordionItem key={i} value={`faq-${i}`}>
+                <AccordionTrigger>{faq.q}</AccordionTrigger>
+                <AccordionContent>{faq.a}</AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </section>
+      )}
     </div>
   );
 }

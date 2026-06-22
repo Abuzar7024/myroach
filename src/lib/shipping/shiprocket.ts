@@ -1,4 +1,4 @@
-import { SHIPPING_RATES } from "@/lib/constants";
+import { getDefaultShippingCharge } from "@/lib/pricing-settings";
 import type { ShippingOption } from "@/store/cart-store";
 
 const SHIPROCKET_API = "https://apiv2.shiprocket.in/v1/external";
@@ -7,6 +7,21 @@ let cachedToken: { token: string; expiresAt: number } | null = null;
 
 function isConfigured() {
   return Boolean(process.env.SHIPROCKET_EMAIL && process.env.SHIPROCKET_PASSWORD);
+}
+
+function getStaticShippingOptions(): ShippingOption[] {
+  const charge = getDefaultShippingCharge();
+  if (charge <= 0) return [];
+
+  return [
+    {
+      id: "standard",
+      label: "Standard Shipping",
+      price: charge,
+      days: "3–7 business days",
+      provider: "static",
+    },
+  ];
 }
 
 async function getShiprocketToken(): Promise<string | null> {
@@ -31,7 +46,7 @@ async function getShiprocketToken(): Promise<string | null> {
   return data.token;
 }
 
-/** Fetch courier rates from Shiprocket when credentials are set; otherwise static rates. */
+/** Fetch courier rates from Shiprocket when credentials are set; otherwise admin shipping charge. */
 export async function getShippingRatesForPincode(
   pincode: string,
   weightKg = 0.5
@@ -40,13 +55,7 @@ export async function getShippingRatesForPincode(
   if (!token || !/^\d{6}$/.test(pincode)) {
     return {
       provider: "static",
-      options: SHIPPING_RATES.map((r) => ({
-        id: r.id,
-        label: r.label,
-        price: r.price,
-        days: r.days,
-        provider: "static",
-      })),
+      options: getStaticShippingOptions(),
     };
   }
 
@@ -65,13 +74,7 @@ export async function getShippingRatesForPincode(
   if (!res.ok) {
     return {
       provider: "static",
-      options: SHIPPING_RATES.map((r) => ({
-        id: r.id,
-        label: r.label,
-        price: r.price,
-        days: r.days,
-        provider: "static",
-      })),
+      options: getStaticShippingOptions(),
     };
   }
 
@@ -90,13 +93,7 @@ export async function getShippingRatesForPincode(
   if (!couriers.length) {
     return {
       provider: "static",
-      options: SHIPPING_RATES.map((r) => ({
-        id: r.id,
-        label: r.label,
-        price: r.price,
-        days: r.days,
-        provider: "static",
-      })),
+      options: getStaticShippingOptions(),
     };
   }
 

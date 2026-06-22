@@ -19,7 +19,6 @@ import { FadeIn } from "@/components/ui/motion";
 import { ComingSoonBlock } from "@/components/home/empty-states";
 import { PROMO_FALLBACK_IMAGE, SHOP_TEASER_IMAGE } from "@/lib/home-fallbacks";
 import { testimonials, instagramPosts } from "@/data/mock-data";
-import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
 import { toast } from "sonner";
 import { subscribeNewsletter } from "@/lib/firebase/services/product.service";
@@ -116,7 +115,7 @@ export function ProductSection({
 export function PromoBanner({
   title,
   subtitle,
-  freeShippingThreshold = FREE_SHIPPING_THRESHOLD,
+  freeShippingThreshold,
 }: {
   title?: string;
   subtitle?: string;
@@ -124,7 +123,11 @@ export function PromoBanner({
 }) {
   const headline = title?.trim();
   const body = subtitle?.trim();
-  if (!headline && !body) return null;
+  const shippingHeadline =
+    freeShippingThreshold != null && freeShippingThreshold > 0
+      ? `FREE SHIP OVER ${formatPrice(freeShippingThreshold)}`
+      : undefined;
+  if (!headline && !body && !shippingHeadline) return null;
 
   return (
     <section className="relative overflow-hidden">
@@ -132,7 +135,7 @@ export function PromoBanner({
         <FadeIn className="flex flex-col justify-center bg-noire-charcoal px-8 py-20 text-noire-white lg:px-16">
           <span className="sticker sticker-pink mb-4 w-fit">neon certified deal</span>
           <h2 className="font-display text-4xl tracking-wide md:text-5xl lg:text-6xl">
-            {headline || `FREE SHIP OVER ${formatPrice(freeShippingThreshold)}`}
+            {headline || shippingHeadline}
           </h2>
           {body ? (
             <p className="mt-4 max-w-md text-sm leading-relaxed text-noire-white/70">{body}</p>

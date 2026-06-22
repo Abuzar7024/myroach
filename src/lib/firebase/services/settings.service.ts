@@ -5,8 +5,6 @@ import type { HomepageSettings, StoreSettings } from "@/types/settings";
 
 const defaultStoreSettings: StoreSettings = {
   storeName: "MY ROACH",
-  freeShippingThreshold: 2499,
-  shippingCharge: 99,
   taxPercentage: 0,
 };
 

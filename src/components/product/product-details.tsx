@@ -24,7 +24,10 @@ import { SizeGuideDialog } from "@/components/product/size-guide-dialog";
 import { AddToCartDialog } from "@/components/shop/add-to-cart-dialog";
 import { BottomIsland } from "@/components/ui/bottom-island";
 import { formatPrice } from "@/lib/format";
-import { FREE_SHIPPING_THRESHOLD, SHIPPING_RATES, DEFAULT_RETURN_POLICY, DEFAULT_MIN_ORDER_QTY, DEFAULT_MAX_ORDER_QTY } from "@/lib/constants";
+import { DEFAULT_MIN_ORDER_QTY, DEFAULT_MAX_ORDER_QTY } from "@/lib/constants";
+import { getFreeShippingThreshold } from "@/lib/pricing-settings";
+import { getStorePolicy } from "@/lib/policies";
+import { useSettings } from "@/hooks/use-settings";
 import { useCartStore } from "@/store/cart-store";
 import { useWishlistStore } from "@/store/wishlist-store";
 import { toast } from "sonner";
@@ -54,6 +57,7 @@ export function ProductDetails({ product, relatedProducts, reviews }: ProductDet
     stock: {},
   };
 
+  const { settings } = useSettings();
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState(defaultVariant.color);
   const [selectedSize, setSelectedSize] = useState("");
@@ -69,7 +73,15 @@ export function ProductDetails({ product, relatedProducts, reviews }: ProductDet
   const outOfStock = product.stock === 0;
   const minQty = product.minOrderQty ?? DEFAULT_MIN_ORDER_QTY;
   const maxQty = Math.min(product.maxOrderQty ?? DEFAULT_MAX_ORDER_QTY, product.stock || DEFAULT_MAX_ORDER_QTY);
-  const returnLabel = product.returnPolicy || DEFAULT_RETURN_POLICY;
+  const returnLabel = product.returnPolicy || getStorePolicy(settings, "returnPolicy");
+  const freeShippingThreshold = getFreeShippingThreshold();
+  const hasFreeShippingOffer = Number.isFinite(freeShippingThreshold);
+  const storeReturnPolicy = getStorePolicy(settings, "returnPolicy");
+  const showShippingTab = Boolean(
+    storeReturnPolicy ||
+      hasFreeShippingOffer ||
+      settings.shippingCharge != null
+  );
   const hasMultipleSizes = variant.sizes.length > 1;
   const showColorPicker = product.variants.length > 1 || (product.variants[0]?.color !== "Default");
   const discountPct =
@@ -428,20 +440,26 @@ export function ProductDetails({ product, relatedProducts, reviews }: ProductDet
               </Button>
             </div>
 
+            {(hasFreeShippingOffer || returnLabel) && (
             <div className="mt-8 grid gap-3 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 sm:grid-cols-3">
-              <div className="flex items-start gap-3 text-sm text-zinc-400">
-                <Truck className="mt-0.5 h-4 w-4 shrink-0 text-zinc-300" />
-                <span>Free shipping over {formatPrice(FREE_SHIPPING_THRESHOLD)}</span>
-              </div>
-              <div className="flex items-start gap-3 text-sm text-zinc-400">
-                <RotateCcw className="mt-0.5 h-4 w-4 shrink-0 text-zinc-300" />
-                <span>{returnLabel}</span>
-              </div>
+              {hasFreeShippingOffer && (
+                <div className="flex items-start gap-3 text-sm text-zinc-400">
+                  <Truck className="mt-0.5 h-4 w-4 shrink-0 text-zinc-300" />
+                  <span>Free shipping over {formatPrice(freeShippingThreshold)}</span>
+                </div>
+              )}
+              {returnLabel && (
+                <div className="flex items-start gap-3 text-sm text-zinc-400">
+                  <RotateCcw className="mt-0.5 h-4 w-4 shrink-0 text-zinc-300" />
+                  <span>{returnLabel}</span>
+                </div>
+              )}
               <div className="flex items-start gap-3 text-sm text-zinc-400">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-zinc-300" />
                 <span>Secure checkout</span>
               </div>
             </div>
+            )}
 
             {product.tags.length > 0 && (
               <div className="mt-6 flex flex-wrap gap-2">
@@ -479,12 +497,14 @@ export function ProductDetails({ product, relatedProducts, reviews }: ProductDet
             >
               Reviews ({reviews.length})
             </TabsTrigger>
+            {showShippingTab && (
             <TabsTrigger
               value="shipping"
               className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-zinc-200 data-[state=active]:bg-transparent"
             >
               Shipping
             </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="description" className="mt-8 max-w-3xl">
@@ -544,29 +564,29 @@ export function ProductDetails({ product, relatedProducts, reviews }: ProductDet
             </div>
           </TabsContent>
 
+          {showShippingTab && (
           <TabsContent value="shipping" className="mt-8 max-w-2xl">
             <div className="space-y-4 text-sm text-zinc-400">
-              <div className="flex gap-3 rounded-lg border border-zinc-800 p-4">
-                <Package className="mt-0.5 h-4 w-4 shrink-0 text-zinc-300" />
-                <div>
-                  <p className="font-medium text-zinc-300">Standard delivery</p>
-                  <p className="mt-1">
-                    {SHIPPING_RATES[0].days} — {formatPrice(SHIPPING_RATES[0].price)}
-                  </p>
+              {hasFreeShippingOffer && settings.shippingCharge != null && settings.shippingCharge >= 0 && (
+                <div className="flex gap-3 rounded-lg border border-zinc-800 p-4">
+                  <Package className="mt-0.5 h-4 w-4 shrink-0 text-zinc-300" />
+                  <div>
+                    <p className="font-medium text-zinc-300">Standard delivery</p>
+                    <p className="mt-1">
+                      {formatPrice(settings.shippingCharge)} — free on orders over{" "}
+                      {formatPrice(freeShippingThreshold)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-3 rounded-lg border border-zinc-800 p-4">
-                <Truck className="mt-0.5 h-4 w-4 shrink-0 text-zinc-300" />
-                <div>
-                  <p className="font-medium text-zinc-300">Express delivery</p>
-                  <p className="mt-1">
-                    {SHIPPING_RATES[1].days} — {formatPrice(SHIPPING_RATES[1].price)}
-                  </p>
+              )}
+              {storeReturnPolicy && (
+                <div className="whitespace-pre-wrap rounded-lg border border-zinc-800 p-4 leading-relaxed">
+                  {storeReturnPolicy}
                 </div>
-              </div>
-              <p>Returns accepted within 30 days in original condition.</p>
+              )}
             </div>
           </TabsContent>
+          )}
         </Tabs>
 
         {relatedProducts.length > 0 && (

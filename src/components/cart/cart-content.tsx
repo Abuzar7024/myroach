@@ -23,7 +23,7 @@ import { loginRedirectPath, storeReturnUrl } from "@/lib/auth-utils";
 import { validateCoupon } from "@/lib/coupons";
 import { useCoupons } from "@/hooks/use-coupons";
 import { useSettings } from "@/hooks/use-settings";
-import { DEFAULT_RETURN_POLICY } from "@/lib/constants";
+import { getStorePolicy } from "@/lib/policies";
 import { toast } from "sonner";
 
 type PendingRemove = {
@@ -40,7 +40,8 @@ function variantLabel(size: string, color: string) {
 
 export function CartContent() {
   const { settings } = useSettings();
-  const freeShippingThreshold = settings.freeShippingThreshold ?? 2499;
+  const freeShippingThreshold = settings.freeShippingThreshold;
+  const returnPolicy = getStorePolicy(settings, "returnPolicy");
   const router = useRouter();
   const { user } = useAuth();
   const {
@@ -190,10 +191,12 @@ export function CartContent() {
           })}
         </div>
 
-        <p className="mt-4 flex items-center gap-2 text-xs text-noire-muted">
-          <RotateCcw className="h-3.5 w-3.5" />
-          {DEFAULT_RETURN_POLICY} on all orders
-        </p>
+        {returnPolicy && (
+          <p className="mt-4 flex items-center gap-2 text-xs text-noire-muted">
+            <RotateCcw className="h-3.5 w-3.5" />
+            {returnPolicy}
+          </p>
+        )}
 
         <section className="mt-8 rounded-lg border border-noire-border bg-noire-charcoal/30 p-5">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-noire-muted">Order summary</h2>
@@ -213,7 +216,9 @@ export function CartContent() {
               <span className="text-noire-muted">Shipping</span>
               <span>{shipping === 0 ? "FREE" : formatPrice(shipping)}</span>
             </div>
-            {subtotal < freeShippingThreshold && (
+            {freeShippingThreshold != null &&
+              freeShippingThreshold > 0 &&
+              subtotal < freeShippingThreshold && (
               <p className="text-xs text-noire-muted">
                 Add {formatPrice(freeShippingThreshold - subtotal)} more for free shipping
               </p>

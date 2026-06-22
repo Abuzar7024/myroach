@@ -1,21 +1,22 @@
 /** Runtime store settings synced from Firestore for cart/checkout math. */
-let freeShippingThreshold = 2499;
-let defaultShippingCharge = 99;
+let freeShippingThreshold = 0;
+let defaultShippingCharge = 0;
 
 export function setPricingSettings(input: {
   freeShippingThreshold?: number;
   shippingCharge?: number;
 }) {
-  if (input.freeShippingThreshold != null && input.freeShippingThreshold > 0) {
-    freeShippingThreshold = input.freeShippingThreshold;
-  }
-  if (input.shippingCharge != null && input.shippingCharge >= 0) {
-    defaultShippingCharge = input.shippingCharge;
-  }
+  freeShippingThreshold =
+    input.freeShippingThreshold != null && input.freeShippingThreshold > 0
+      ? input.freeShippingThreshold
+      : 0;
+  defaultShippingCharge =
+    input.shippingCharge != null && input.shippingCharge >= 0 ? input.shippingCharge : 0;
 }
 
+/** Returns Infinity when free shipping is not configured in admin. */
 export function getFreeShippingThreshold() {
-  return freeShippingThreshold;
+  return freeShippingThreshold > 0 ? freeShippingThreshold : Number.POSITIVE_INFINITY;
 }
 
 export function getDefaultShippingCharge() {

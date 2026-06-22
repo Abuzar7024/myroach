@@ -7,7 +7,8 @@ import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, Repeat, Wallet } from "luc
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { useOrders } from "@/hooks/use-orders";
-import { CANCELLATION_POLICY } from "@/lib/cancellation-policy";
+import { useSettings } from "@/hooks/use-settings";
+import { getStorePolicy } from "@/lib/policies";
 import {
   canSubmitCancellationRequest,
   requestStatusLabel,
@@ -39,6 +40,8 @@ export default function OrderCancellationPage() {
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const { settings } = useSettings();
+  const returnPolicy = getStorePolicy(settings, "returnPolicy");
 
   useEffect(() => {
     if (!params.id) return;
@@ -252,17 +255,12 @@ export default function OrderCancellationPage() {
           )}
         </section>
 
+        {returnPolicy ? (
         <section className="cyber-card p-6">
-          <h2 className="text-sm font-medium text-noire-white">{CANCELLATION_POLICY.title}</h2>
-          <p className="mt-2 text-xs text-noire-muted">{CANCELLATION_POLICY.summary}</p>
-          <ul className="mt-4 space-y-2 text-xs leading-relaxed text-noire-muted">
-            {CANCELLATION_POLICY.points.map((point) => (
-              <li key={point} className="flex gap-2">
-                <span className="text-accent-cyan">•</span>
-                <span>{point}</span>
-              </li>
-            ))}
-          </ul>
+          <h2 className="text-sm font-medium text-noire-white">Return & cancellation policy</h2>
+          <p className="mt-4 whitespace-pre-wrap text-xs leading-relaxed text-noire-muted">
+            {returnPolicy}
+          </p>
           <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm">
             <input
               type="checkbox"
@@ -271,13 +269,20 @@ export default function OrderCancellationPage() {
               className="mt-1 h-4 w-4 rounded border-noire-border accent-accent-cyan"
             />
             <span className="text-noire-muted">
-              I have read and agree to the cancellation and return policy.
+              I have read and agree to the return and cancellation policy above.
             </span>
           </label>
         </section>
+        ) : (
+        <section className="cyber-card p-6">
+          <p className="text-sm text-noire-muted">
+            Return policy has not been published yet. Contact support if you need help with this order.
+          </p>
+        </section>
+        )}
 
         <div className="flex flex-col gap-3">
-          <Button type="submit" loading={submitting} disabled={!policyAccepted}>
+          <Button type="submit" loading={submitting} disabled={!policyAccepted || !returnPolicy}>
             Submit request
           </Button>
           <Button type="button" variant="outline" onClick={() => router.back()}>

@@ -56,7 +56,7 @@ function SummaryLines({
   couponCode: string | null;
   shipping: number;
   total: number;
-  freeShippingThreshold: number;
+  freeShippingThreshold?: number;
 }) {
   return (
     <>
@@ -85,7 +85,9 @@ function SummaryLines({
           <span className="text-noire-muted">Shipping</span>
           <span>{shipping === 0 ? "FREE" : formatPrice(shipping)}</span>
         </div>
-        {subtotal < freeShippingThreshold && (
+        {freeShippingThreshold != null &&
+          freeShippingThreshold > 0 &&
+          subtotal < freeShippingThreshold && (
           <p className="text-xs text-noire-muted">
             Free shipping on orders over {formatPrice(freeShippingThreshold)}
           </p>
@@ -103,7 +105,7 @@ export function CheckoutContent() {
   const router = useRouter();
   const { user, updateUserProfile } = useAuth();
   const { settings } = useSettings();
-  const freeShippingThreshold = settings.freeShippingThreshold ?? 2499;
+  const freeShippingThreshold = settings.freeShippingThreshold;
   const {
     items,
     getSubtotal,

@@ -48,15 +48,6 @@ export const FOOTER_LINKS = {
 
 export const LEGAL_LINKS = FOOTER_LINKS.legal;
 
-export const FREE_SHIPPING_THRESHOLD = 2499;
-
-export const SHIPPING_RATES = [
-  { id: "standard", label: "Standard Shipping", price: 99, days: "5-7 business days" },
-  { id: "express", label: "Express Shipping", price: 199, days: "2-3 business days" },
-  { id: "overnight", label: "Overnight", price: 399, days: "Next business day" },
-] as const;
-
-export const DEFAULT_RETURN_POLICY = "Easy returns within the policy window shown at checkout";
 export const DEFAULT_MIN_ORDER_QTY = 1;
 export const DEFAULT_MAX_ORDER_QTY = 10;
 

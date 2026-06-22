@@ -7,6 +7,7 @@ import { SITE_NAME } from "@/lib/constants";
 import { FooterSizeGuide } from "@/components/layout/footer-size-guide";
 import { useSettings } from "@/hooks/use-settings";
 import { mergeFooterConfig } from "@/lib/footer-config";
+import { isPolicyRouteAvailable } from "@/lib/policies";
 
 export function Footer() {
   const { settings } = useSettings();
@@ -55,7 +56,9 @@ export function Footer() {
           </div>
 
           {linkSections.map((section) => {
-            const links = section.links.filter((l) => l.enabled);
+            const links = section.links.filter(
+              (l) => l.enabled && isPolicyRouteAvailable(l.href, settings)
+            );
             if (links.length === 0) return null;
             return (
               <div key={section.id}>
@@ -110,7 +113,7 @@ export function Footer() {
             <div className="flex flex-wrap justify-center gap-4 text-xs text-noire-white/40 sm:gap-6">
               {footer.sections
                 .find((s) => s.id === "legal" && s.enabled)
-                ?.links.filter((l) => l.enabled)
+                ?.links.filter((l) => l.enabled && isPolicyRouteAvailable(l.href, settings))
                 .map((link) => (
                   <Link
                     key={link.href}
