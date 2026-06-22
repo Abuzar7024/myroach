@@ -11,15 +11,15 @@ const defaultStoreSettings: StoreSettings = {
 };
 
 const defaultHomepageSettings: HomepageSettings = {
-  showFeatured: true,
-  showFeaturedProducts: true,
+  showFeatured: false,
+  showFeaturedProducts: false,
   featuredRotateSeconds: 5,
-  showBestSellers: true,
-  showNewArrivals: true,
-  showPromo: true,
-  showShopTeaser: true,
-  showBrandStory: true,
-  showNewsletter: true,
+  showBestSellers: false,
+  showNewArrivals: false,
+  showPromo: false,
+  showShopTeaser: false,
+  showBrandStory: false,
+  showNewsletter: false,
 };
 
 export function subscribeStoreSettings(

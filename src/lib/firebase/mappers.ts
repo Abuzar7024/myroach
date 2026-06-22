@@ -267,8 +267,8 @@ export function mapStoreSettings(raw: RawDoc): StoreSettings {
 
 export function mapHomepageSettings(raw: RawDoc): HomepageSettings {
   return {
-    showFeatured: bool(raw.showFeatured, true),
-    showFeaturedProducts: bool(raw.showFeaturedProducts, true),
+    showFeatured: bool(raw.showFeatured, false),
+    showFeaturedProducts: bool(raw.showFeaturedProducts, false),
     featuredRotateSeconds:
       raw.featuredRotateSeconds != null ? num(raw.featuredRotateSeconds, 5) : 5,
     featuredCollectionIds: Array.isArray(raw.featuredCollectionIds)
@@ -277,15 +277,15 @@ export function mapHomepageSettings(raw: RawDoc): HomepageSettings {
     featuredCollectionSchedules: Array.isArray(raw.featuredCollectionSchedules)
       ? (raw.featuredCollectionSchedules as HomepageSettings["featuredCollectionSchedules"])
       : [],
-    showBestSellers: bool(raw.showBestSellers, true),
+    showBestSellers: bool(raw.showBestSellers, false),
     bestSellerIds: Array.isArray(raw.bestSellerIds) ? (raw.bestSellerIds as string[]) : [],
-    showNewArrivals: bool(raw.showNewArrivals, true),
+    showNewArrivals: bool(raw.showNewArrivals, false),
     newArrivalIds: Array.isArray(raw.newArrivalIds) ? (raw.newArrivalIds as string[]) : [],
-    showPromo: bool(raw.showPromo, true),
+    showPromo: bool(raw.showPromo, false),
     promoTitle: raw.promoTitle != null ? str(raw.promoTitle) : undefined,
     promoSubtitle: raw.promoSubtitle != null ? str(raw.promoSubtitle) : undefined,
-    showShopTeaser: bool(raw.showShopTeaser, true),
-    showBrandStory: bool(raw.showBrandStory, true),
-    showNewsletter: bool(raw.showNewsletter, true),
+    showShopTeaser: bool(raw.showShopTeaser, false),
+    showBrandStory: bool(raw.showBrandStory, false),
+    showNewsletter: bool(raw.showNewsletter, false),
   };
 }

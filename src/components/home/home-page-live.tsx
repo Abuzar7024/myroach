@@ -37,8 +37,7 @@ export function HomePageLive() {
   const newArrivals = useMemo(() => {
     if (homepage.newArrivalIds?.length) {
       const byId = new Map(products.map((p) => [p.id, p]));
-      const picked = homepage.newArrivalIds.map((id) => byId.get(id)).filter(Boolean);
-      if (picked.length) return picked as typeof products;
+      return homepage.newArrivalIds.map((id) => byId.get(id)).filter(Boolean) as typeof products;
     }
     return products.filter((p) => p.isNewArrival);
   }, [products, homepage.newArrivalIds]);
@@ -46,8 +45,7 @@ export function HomePageLive() {
   const bestSellers = useMemo(() => {
     if (homepage.bestSellerIds?.length) {
       const byId = new Map(products.map((p) => [p.id, p]));
-      const picked = homepage.bestSellerIds.map((id) => byId.get(id)).filter(Boolean);
-      if (picked.length) return picked as typeof products;
+      return homepage.bestSellerIds.map((id) => byId.get(id)).filter(Boolean) as typeof products;
     }
     return products.filter((p) => p.isBestSeller);
   }, [products, homepage.bestSellerIds]);
@@ -59,16 +57,17 @@ export function HomePageLive() {
     );
     if (activeIds.length) {
       const byId = new Map(categories.map((c) => [c.id, c]));
-      const picked = activeIds.map((id) => byId.get(id)).filter(Boolean);
-      if (picked.length) return picked as typeof categories;
+      return activeIds.map((id) => byId.get(id)).filter(Boolean) as typeof categories;
     }
-    return categories;
+    return categories.filter((c) => c.isActive);
   }, [categories, homepage.featuredCollectionIds, homepage.featuredCollectionSchedules]);
 
   const heroProducts = useMemo(
     () => products.filter((p) => p.isFeatured && p.images[0]).slice(0, 4),
     [products]
   );
+
+  const hasPromoCopy = Boolean(homepage.promoTitle?.trim() || homepage.promoSubtitle?.trim());
 
   const initialLoad =
     (productsLoading || categoriesLoading || bannersLoading || homepageLoading) &&
@@ -92,7 +91,7 @@ export function HomePageLive() {
         loading={bannersLoading}
       />
 
-      {homepage.showFeaturedProducts !== false && (
+      {homepage.showFeaturedProducts === true && (
         <FeaturedProducts
           products={products}
           rotateSeconds={homepage.featuredRotateSeconds ?? 5}
@@ -100,34 +99,32 @@ export function HomePageLive() {
         />
       )}
 
-      {homepage.showFeatured !== false && (
+      {homepage.showFeatured === true && featuredCategories.length > 0 && (
         <FeaturedCollections categories={featuredCategories} loading={categoriesLoading} />
       )}
 
-      <ProductSection
-        title="LATEST DROPS"
-        subtitle="just landed 🔥"
-        products={latestProducts.length > 0 ? latestProducts : products}
-        viewAllHref="/shop?sort=newest"
-        loading={productsLoading}
-        limit={8}
-        emptyTitle="New products coming soon"
-        emptySubtitle="We are adding new items. Check back soon or browse the shop."
-      />
+      {latestProducts.length > 0 && (
+        <ProductSection
+          title="LATEST DROPS"
+          subtitle="just landed 🔥"
+          products={latestProducts}
+          viewAllHref="/shop?sort=newest"
+          loading={productsLoading}
+          limit={8}
+        />
+      )}
 
-      {homepage.showNewArrivals !== false && (
+      {homepage.showNewArrivals === true && newArrivals.length > 0 && (
         <ProductSection
           title="FRESH HEAT"
           subtitle="just dropped 🪳"
           products={newArrivals}
           viewAllHref="/shop?filter=new"
           loading={productsLoading}
-          emptyTitle="New arrivals coming soon"
-          emptySubtitle="New items will show here when they are added in the admin panel."
         />
       )}
 
-      {homepage.showPromo !== false && (
+      {homepage.showPromo === true && hasPromoCopy && (
         <PromoBanner
           title={homepage.promoTitle}
           subtitle={homepage.promoSubtitle}
@@ -135,21 +132,19 @@ export function HomePageLive() {
         />
       )}
 
-      {homepage.showBestSellers !== false && (
+      {homepage.showBestSellers === true && bestSellers.length > 0 && (
         <ProductSection
           title="CERTIFIED HEAT"
           subtitle="most copped"
           products={bestSellers}
           viewAllHref="/shop?sort=popular"
           loading={productsLoading}
-          emptyTitle="Best sellers coming soon"
-          emptySubtitle="Top picks will appear here once orders start coming in."
         />
       )}
 
-      {homepage.showShopTeaser !== false && <ShopTeaserSection />}
-      {homepage.showBrandStory !== false && <BrandStory />}
-      {homepage.showNewsletter !== false && <Newsletter />}
+      {homepage.showShopTeaser === true && <ShopTeaserSection />}
+      {homepage.showBrandStory === true && <BrandStory />}
+      {homepage.showNewsletter === true && <Newsletter />}
     </>
   );
 }

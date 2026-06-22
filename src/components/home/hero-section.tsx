@@ -6,8 +6,6 @@ import { ArrowRight } from "lucide-react";
 import type { Category } from "@/types";
 import { FadeIn } from "@/components/ui/motion";
 import { Shimmer } from "@/components/ui/shimmer";
-import { ComingSoonBlock } from "@/components/home/empty-states";
-import { FALLBACK_CATEGORY_TILES } from "@/lib/home-fallbacks";
 
 export { SplitScreenHero } from "./split-screen-hero";
 
@@ -22,13 +20,12 @@ function genderBadge(gender?: Category["gender"]) {
   return "all";
 }
 
-function categoryImage(cat: Category, index: number) {
-  if (cat.image) return cat.image;
-  return FALLBACK_CATEGORY_TILES[index % FALLBACK_CATEGORY_TILES.length]?.image;
+function categoryImage(cat: Category) {
+  return cat.image || null;
 }
 
 export function FeaturedCollections({ categories, loading = false }: FeaturedCollectionsProps) {
-  const liveCategories = categories.filter((c) => c.isActive);
+  const liveCategories = categories.filter((c) => c.isActive && c.image);
 
   if (loading && liveCategories.length === 0) {
     return (
@@ -46,17 +43,7 @@ export function FeaturedCollections({ categories, loading = false }: FeaturedCol
   }
 
   if (!loading && liveCategories.length === 0) {
-    return (
-      <section className="py-16 lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <ComingSoonBlock
-            title="Collections coming soon"
-            subtitle="Categories will show here when you add them in the admin panel."
-            ctaLabel="Browse shop"
-          />
-        </div>
-      </section>
-    );
+    return null;
   }
 
   return (
@@ -68,8 +55,9 @@ export function FeaturedCollections({ categories, loading = false }: FeaturedCol
         </FadeIn>
 
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
-          {liveCategories.map((cat, index) => {
-            const image = categoryImage(cat, index);
+          {liveCategories.map((cat) => {
+            const image = categoryImage(cat);
+            if (!image) return null;
             return (
               <FadeIn key={cat.id}>
                 <Link

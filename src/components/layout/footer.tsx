@@ -14,6 +14,8 @@ export function Footer() {
   const social = settings.socialLinks ?? {};
   const footer = mergeFooterConfig(settings.footerConfig);
   const linkSections = footer.sections.filter((s) => s.enabled && s.id !== "legal");
+  const hasSocial = Boolean(social.instagram || social.facebook || social.twitter);
+  const hasContact = Boolean(settings.address || settings.contactEmail || settings.phone);
 
   return (
     <footer className="relative border-t border-accent-cyan/30 bg-noire-black text-noire-white">
@@ -29,10 +31,9 @@ export function Footer() {
               {storeName}
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-noire-white/60">
-              {settings.footerContent ||
-                "Gen Z streetwear for the underground. Built like a roach, dressed like a menace."}
+              {settings.footerContent ? settings.footerContent : null}
             </p>
-            {footer.showSocial && (
+            {footer.showSocial && hasSocial && (
               <div className="mt-6 flex gap-4">
                 {social.instagram && (
                   <a href={social.instagram} className="text-noire-white/60 transition-colors hover:text-accent-cyan" aria-label="Instagram">
@@ -81,7 +82,7 @@ export function Footer() {
             );
           })}
 
-          {footer.showContact && (
+          {footer.showContact && hasContact && (
             <div>
               <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-accent-cyan">
                 Contact

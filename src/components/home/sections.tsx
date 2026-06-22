@@ -122,18 +122,21 @@ export function PromoBanner({
   subtitle?: string;
   freeShippingThreshold?: number;
 }) {
+  const headline = title?.trim();
+  const body = subtitle?.trim();
+  if (!headline && !body) return null;
+
   return (
     <section className="relative overflow-hidden">
       <div className="grid lg:grid-cols-2">
         <FadeIn className="flex flex-col justify-center bg-noire-charcoal px-8 py-20 text-noire-white lg:px-16">
           <span className="sticker sticker-pink mb-4 w-fit">neon certified deal</span>
           <h2 className="font-display text-4xl tracking-wide md:text-5xl lg:text-6xl">
-            {title || `FREE SHIP OVER ${formatPrice(freeShippingThreshold)}`}
+            {headline || `FREE SHIP OVER ${formatPrice(freeShippingThreshold)}`}
           </h2>
-          <p className="mt-4 max-w-md text-sm leading-relaxed text-noire-white/70">
-            {subtitle ||
-              "Stack your cart, skip the shipping fee. More drip for your bread — the rotation got you, bhai."}
-          </p>
+          {body ? (
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-noire-white/70">{body}</p>
+          ) : null}
           <Button asChild variant="drip" className="mt-8 w-fit">
             <Link href="/shop">Full Send → Shop</Link>
           </Button>

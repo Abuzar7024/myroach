@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { Banner, Product } from "@/types";
-import { FALLBACK_HERO, FALLBACK_HERO_SLIDES } from "@/lib/home-fallbacks";
 import { formatPrice } from "@/lib/format";
 import { Shimmer } from "@/components/ui/shimmer";
 import { Button } from "@/components/ui/button";
@@ -24,30 +23,17 @@ type Slide = {
   headline: string;
   subline: string;
   link: string;
-  isFallback: boolean;
 };
 
 function buildSlides(banners: Banner[]): Slide[] {
   const adminSlides = banners.filter((b) => b.image);
-  if (adminSlides.length === 0) {
-    return FALLBACK_HERO_SLIDES.map((s, i) => ({
-      id: `fallback-${i}`,
-      image: s.image,
-      tagline: s.tagline,
-      headline: s.headline,
-      subline: s.subline,
-      link: FALLBACK_HERO.link,
-      isFallback: true,
-    }));
-  }
   return adminSlides.map((b) => ({
     id: b.id,
     image: b.image,
     tagline: b.subtitle || "neon certified",
     headline: b.title,
-    subline: b.subtitle || "Certified underground drip — full send only.",
+    subline: b.subtitle || "",
     link: b.link || "/shop",
-    isFallback: false,
   }));
 }
 
@@ -87,6 +73,25 @@ export function SplitScreenHero({
         <div className="grid lg:min-h-[min(88vh,720px)] lg:grid-cols-2">
           <Shimmer className="aspect-[4/5] min-h-[300px] w-full sm:aspect-[16/10] lg:aspect-auto lg:min-h-0" />
           <Shimmer className="min-h-[280px] border-t border-accent-cyan/10 lg:border-l lg:border-t-0" />
+        </div>
+      </section>
+    );
+  }
+
+  if (!loading && slides.length === 0) {
+    return (
+      <section className="relative -mt-16 w-full lg:-mt-20">
+        <div className="flex min-h-[min(60vh,480px)] flex-col items-center justify-center border-b border-accent-cyan/10 bg-noire-black px-4 py-24 text-center text-noire-white">
+          <span className="sticker sticker-neon">🪳 MY ROACH</span>
+          <h1 className="font-display mt-6 text-4xl tracking-wide md:text-5xl">Storefront loading</h1>
+          <p className="mt-4 max-w-md text-sm text-noire-white/60">
+            Hero banners and products appear here once you add them in the admin panel.
+          </p>
+          {featuredProducts.length > 0 && (
+            <Button asChild variant="drip" size="lg" className="mt-8">
+              <Link href="/shop">Browse shop</Link>
+            </Button>
+          )}
         </div>
       </section>
     );
@@ -155,17 +160,15 @@ export function SplitScreenHero({
 
         <div className="relative flex flex-col justify-between border-t border-accent-cyan/10 bg-noire-black px-4 py-8 text-noire-white sm:px-6 sm:py-10 md:px-8 md:py-12 lg:border-l lg:border-t-0 lg:px-14 lg:py-16">
           <div key={activeSlide} className="flex flex-1 flex-col justify-center animate-fade-in">
-            {slide.isFallback ? (
-              <span className="sticker sticker-neon mb-4 w-fit">{FALLBACK_HERO.title}</span>
-            ) : (
-              <span className="sticker sticker-lime mb-4 max-w-full">{slide.tagline}</span>
-            )}
+            <span className="sticker sticker-lime mb-4 max-w-full">{slide.tagline}</span>
             <h1 className="hero-headline glitch-text font-display whitespace-pre-line text-3xl leading-[1.05] tracking-wide sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
               {slide.headline}
             </h1>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-noire-white/75 sm:mt-6 sm:text-base">
-              {slide.subline}
-            </p>
+            {slide.subline ? (
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-noire-white/75 sm:mt-6 sm:text-base">
+                {slide.subline}
+              </p>
+            ) : null}
             <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:gap-4">
               <Button asChild variant="drip" size="lg" className="w-full sm:w-auto">
                 <Link href={slide.link}>
