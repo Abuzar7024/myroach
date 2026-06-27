@@ -223,82 +223,106 @@ export function Header() {
             </div>
           </div>
         </div>
+      </header>
 
-        {/* Mobile menu drawer wrapper */}
+      {/* Mobile menu — outside header so backdrop-blur on header does not bleed through */}
+      <div
+        className={cn(
+          "fixed inset-0 z-[100] lg:hidden",
+          isMobileOpen ? "pointer-events-auto" : "pointer-events-none"
+        )}
+        aria-hidden={!isMobileOpen}
+      >
         <div
           className={cn(
-            "fixed inset-0 z-[60] lg:hidden transition-all duration-300 ease-in-out",
-            isMobileOpen ? "visible pointer-events-auto" : "invisible pointer-events-none"
+            "absolute inset-0 bg-noire-black/95 transition-opacity duration-300 ease-out",
+            isMobileOpen ? "opacity-100" : "opacity-0"
           )}
+          onClick={() => setIsMobileOpen(false)}
+          aria-hidden="true"
+        />
+        <nav
+          className={cn(
+            "absolute left-0 top-0 flex h-dvh w-[min(300px,85vw)] max-w-full flex-col border-r border-accent-cyan/30 bg-noire-charcoal p-6 text-noire-white shadow-[10px_0_35px_rgba(0,0,0,0.9)] transition-transform duration-300 ease-out sm:p-8",
+            "pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]",
+            isMobileOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Mobile navigation"
         >
-          {/* Backdrop overlay */}
-          <div
-            className={cn(
-              "absolute inset-0 bg-noire-black/90 backdrop-blur-sm transition-opacity duration-300 ease-in-out",
-              isMobileOpen ? "opacity-100" : "opacity-0"
-            )}
-            onClick={() => setIsMobileOpen(false)}
-            aria-hidden="true"
-          />
-          {/* Drawer content */}
-          <nav
-            className={cn(
-              "relative flex h-full w-[300px] flex-col border-r border-accent-cyan/20 bg-gradient-to-b from-[#0a0a0f] to-[#07070a] p-6 text-noire-white shadow-[10px_0_35px_rgba(0,0,0,0.85)] transition-transform duration-300 ease-in-out sm:p-8",
-              isMobileOpen ? "translate-x-0" : "-translate-x-full"
-            )}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Top decorative neon accent bar */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent-cyan via-accent-pink to-accent-lime" />
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent-cyan via-accent-pink to-accent-lime" />
 
-            {/* Header */}
-            <div className="mb-6 flex items-center justify-between border-b border-noire-border/80 pb-4 mt-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xl" aria-hidden="true">🪳</span>
-                <span className="font-display text-base font-bold tracking-[0.15em] text-noire-white uppercase">
-                  {storeName}
-                </span>
-              </div>
-              <button
-                type="button"
+          <div className="mb-6 flex items-center justify-between border-b border-noire-border/80 pb-4 mt-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xl" aria-hidden="true">🪳</span>
+              <span className="font-display text-base font-bold tracking-[0.15em] text-noire-white uppercase">
+                {storeName}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsMobileOpen(false)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-noire-border bg-noire-black text-noire-muted hover:border-accent-pink/50 hover:text-accent-pink hover:bg-accent-pink/10 transition-all duration-200 active:scale-95"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto overscroll-contain pr-1 space-y-6">
+            <div className="space-y-2.5">
+              <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-accent-cyan pl-2 mb-2 flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent-cyan animate-pulse" />
+                Navigation
+              </p>
+
+              <Link
+                href="/cart"
                 onClick={() => setIsMobileOpen(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-noire-border/80 bg-noire-black/40 text-noire-muted hover:border-accent-pink/50 hover:text-accent-pink hover:bg-accent-pink/5 transition-all duration-200 active:scale-95"
-                aria-label="Close menu"
+                className={cn(
+                  "flex items-center gap-3.5 rounded-xl border px-4 py-3 text-sm font-semibold uppercase tracking-wider transition-all duration-200",
+                  pathname === "/cart"
+                    ? "border-accent-cyan/40 bg-accent-cyan/15 text-accent-cyan"
+                    : "border-noire-border bg-noire-black/50 text-noire-white hover:border-accent-cyan/30 hover:bg-accent-cyan/10 hover:text-accent-cyan"
+                )}
               >
-                <X className="h-5 w-5" />
-              </button>
+                <ShoppingCart className="h-5 w-5" />
+                <span>Cart</span>
+                {displayCartCount > 0 && (
+                  <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent-cyan px-1.5 text-[10px] font-black text-noire-black">
+                    {displayCartCount}
+                  </span>
+                )}
+              </Link>
+
+              {NAV_LINKS.map((link) => {
+                const Icon = getLinkIcon(link.href);
+                const active = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setIsMobileOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3.5 rounded-xl border px-4 py-3 text-sm font-semibold uppercase tracking-wider transition-all duration-200",
+                      active
+                        ? "border-accent-cyan/40 bg-accent-cyan/15 text-accent-cyan"
+                        : "border-noire-border/60 bg-noire-black/40 text-noire-muted hover:border-accent-cyan/30 hover:bg-noire-black/60 hover:text-noire-white"
+                    )}
+                  >
+                    <Icon className={cn("h-5 w-5", active ? "text-accent-cyan" : "text-noire-muted")} />
+                    <span>{link.label}</span>
+                  </Link>
+                );
+              })}
             </div>
 
-            {/* Scrollable links */}
-            <div className="flex-1 overflow-y-auto pr-1 space-y-6">
-              {/* Category / Nav links */}
-              <div className="space-y-2.5">
-                <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-accent-cyan/85 pl-2 mb-2 flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-accent-cyan animate-pulse" />
-                  Navigation
+            {mobileExtraLinks.length > 0 && (
+              <div className="space-y-2.5 pt-5 border-t border-noire-border/60">
+                <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-noire-muted pl-2 mb-2">
+                  Information
                 </p>
-                
-                {/* Cart link */}
-                <Link
-                  href="/cart"
-                  onClick={() => setIsMobileOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3.5 rounded-xl border px-4 py-3 text-sm font-semibold uppercase tracking-wider transition-all duration-250",
-                    pathname === "/cart"
-                      ? "border-accent-cyan/30 bg-accent-cyan/10 text-accent-cyan shadow-[0_0_12px_rgba(0,240,255,0.15)]"
-                      : "border-noire-border/40 bg-noire-black/20 text-noire-white hover:border-accent-cyan/30 hover:bg-accent-cyan/5 hover:text-accent-cyan"
-                  )}
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  <span>Cart</span>
-                  {displayCartCount > 0 && (
-                    <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent-cyan px-1.5 text-[10px] font-black text-noire-black shadow-md shadow-accent-cyan/20">
-                      {displayCartCount}
-                    </span>
-                  )}
-                </Link>
-
-                {NAV_LINKS.map((link) => {
+                {mobileExtraLinks.map((link) => {
                   const Icon = getLinkIcon(link.href);
                   const active = pathname === link.href;
                   return (
@@ -307,105 +331,75 @@ export function Header() {
                       href={link.href}
                       onClick={() => setIsMobileOpen(false)}
                       className={cn(
-                        "flex items-center gap-3.5 rounded-xl border px-4 py-3 text-sm font-semibold uppercase tracking-wider transition-all duration-250",
+                        "flex items-center gap-3.5 rounded-xl border px-4 py-2.5 text-xs font-semibold uppercase tracking-wide transition-all duration-200",
                         active
-                          ? "border-accent-cyan/30 bg-accent-cyan/10 text-accent-cyan shadow-[0_0_12px_rgba(0,240,255,0.15)]"
-                          : "border-transparent text-noire-muted hover:border-noire-border/40 hover:bg-noire-black/30 hover:text-noire-white"
+                          ? "border-accent-cyan/30 bg-accent-cyan/10 text-accent-cyan"
+                          : "border-transparent bg-noire-black/30 text-noire-muted hover:text-noire-white hover:bg-noire-black/50"
                       )}
                     >
-                      <Icon className={cn("h-5 w-5 transition-colors", active ? "text-accent-cyan" : "text-noire-muted")} />
+                      <Icon className="h-4 w-4" />
                       <span>{link.label}</span>
                     </Link>
                   );
                 })}
               </div>
+            )}
+          </div>
 
-              {/* Policy / Extra links */}
-              {mobileExtraLinks.length > 0 && (
-                <div className="space-y-2.5 pt-5 border-t border-noire-border/60">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-noire-muted pl-2 mb-2">
-                    Information
-                  </p>
-                  {mobileExtraLinks.map((link) => {
-                    const Icon = getLinkIcon(link.href);
-                    const active = pathname === link.href;
-                    return (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        onClick={() => setIsMobileOpen(false)}
-                        className={cn(
-                          "flex items-center gap-3.5 rounded-xl border px-4 py-2.5 text-xs font-semibold uppercase tracking-wide transition-all duration-250",
-                          active
-                            ? "border-accent-cyan/25 bg-accent-cyan/5 text-accent-cyan"
-                            : "border-transparent text-noire-muted hover:text-noire-white hover:bg-noire-black/20"
-                        )}
-                      >
-                        <Icon className="h-4.5 w-4.5" />
-                        <span>{link.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Bottom User Section */}
-            <div className="mt-auto border-t border-noire-border/80 pt-5">
-              {user ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 rounded-xl border border-noire-border/50 bg-noire-black/30 p-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent-cyan/50 bg-noire-black text-sm font-bold text-accent-cyan shadow-[0_0_10px_rgba(0,240,255,0.2)]">
-                      {(user.displayName || user.phone || user.email || "U").charAt(0).toUpperCase()}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-bold text-noire-white">
-                        {user.displayName || "User"}
-                      </p>
-                      <p className="truncate text-[10px] text-noire-muted">
-                        {user.email || user.phone || "Signed In"}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link
-                      href="/account"
-                      onClick={() => setIsMobileOpen(false)}
-                      className="flex items-center justify-center gap-2 rounded-xl border border-accent-cyan/40 bg-accent-cyan/5 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-accent-cyan hover:bg-accent-cyan/15 transition-all"
-                    >
-                      <User className="h-4 w-4" />
-                      <span>Account</span>
-                    </Link>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        logout();
-                        setIsMobileOpen(false);
-                      }}
-                      className="flex items-center justify-center gap-2 rounded-xl border border-noire-border bg-noire-black/20 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-noire-muted hover:text-accent-pink hover:border-accent-pink/30 hover:bg-accent-pink/5 transition-all"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Log Out</span>
-                    </button>
+          <div className="mt-auto shrink-0 border-t border-noire-border/80 pt-5">
+            {user ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 rounded-xl border border-noire-border bg-noire-black/60 p-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent-cyan/50 bg-noire-charcoal text-sm font-bold text-accent-cyan">
+                    {(user.displayName || user.phone || user.email || "U").charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-bold text-noire-white">
+                      {user.displayName || "User"}
+                    </p>
+                    <p className="truncate text-[10px] text-noire-muted">
+                      {user.email || user.phone || "Signed In"}
+                    </p>
                   </div>
                 </div>
-              ) : (
-                <Button asChild className="w-full h-11 border border-accent-cyan/40 bg-accent-cyan/10 hover:bg-accent-cyan/20 text-accent-cyan font-bold uppercase tracking-wider rounded-xl" variant="outline">
-                  <Link href="/login" onClick={() => setIsMobileOpen(false)}>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    href="/account"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-accent-cyan/40 bg-accent-cyan/10 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-accent-cyan hover:bg-accent-cyan/20 transition-all"
+                  >
                     <User className="h-4 w-4" />
-                    <span>Sign In</span>
+                    <span>Account</span>
                   </Link>
-                </Button>
-              )}
-              <p className="mt-5 text-center text-[9px] text-noire-muted tracking-widest uppercase">
-                squad up — full send 🪳
-              </p>
-            </div>
-          </nav>
-        </div>
-      </header>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      setIsMobileOpen(false);
+                    }}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-noire-border bg-noire-black/50 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-noire-muted hover:text-accent-pink hover:border-accent-pink/30 hover:bg-accent-pink/10 transition-all"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Log Out</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Button asChild className="w-full h-11 border border-accent-cyan/40 bg-accent-cyan/10 hover:bg-accent-cyan/20 text-accent-cyan font-bold uppercase tracking-wider rounded-xl" variant="outline">
+                <Link href="/login" onClick={() => setIsMobileOpen(false)}>
+                  <User className="h-4 w-4" />
+                  <span>Sign In</span>
+                </Link>
+              </Button>
+            )}
+            <p className="mt-5 text-center text-[9px] text-noire-muted tracking-widest uppercase">
+              squad up — full send 🪳
+            </p>
+          </div>
+        </nav>
+      </div>
 
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
         <DialogContent className="border-accent-cyan/40 bg-noire-charcoal sm:max-w-md">
