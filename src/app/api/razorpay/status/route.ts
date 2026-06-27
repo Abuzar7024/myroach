@@ -1,16 +1,28 @@
 import { NextResponse } from "next/server";
-import { getPublicRazorpayKeyId, isRazorpayConfigured, maskRazorpayKeyId } from "@/lib/razorpay/config";
+import {
+  getPublicRazorpayKeyId,
+  getRazorpayKeyId,
+  getRazorpayMode,
+  isRazorpayConfigured,
+  keysMatchPublicAndSecret,
+  maskRazorpayKeyId,
+} from "@/lib/razorpay/config";
 
 export async function GET() {
   const keyId = getPublicRazorpayKeyId();
   const configured = isRazorpayConfigured();
-  const mode = keyId.startsWith("rzp_live_") ? "live" : keyId.startsWith("rzp_test_") ? "test" : "unknown";
+  const keysMatch = keysMatchPublicAndSecret();
 
   return NextResponse.json({
     configured,
-    mode,
+    mode: getRazorpayMode(getRazorpayKeyId()),
     keyId: maskRazorpayKeyId(keyId),
+    keysMatch,
+    keysMismatchWarning: keysMatch
+      ? null
+      : "NEXT_PUBLIC_RAZORPAY_KEY_ID must exactly match RAZORPAY_KEY_ID or checkout will fail.",
     webhookConfigured: Boolean(process.env.RAZORPAY_WEBHOOK_SECRET),
     eventsLogging: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON),
+    adminOrderPersist: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON),
   });
 }

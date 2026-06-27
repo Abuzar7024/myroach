@@ -1,4 +1,5 @@
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
+import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
 function initAdminApp(): App | null {
@@ -22,4 +23,9 @@ function initAdminApp(): App | null {
 export function getAdminFirestore(): Firestore | null {
   const app = initAdminApp();
   return app ? getFirestore(app) : null;
+}
+
+export function getAdminAuth(): Auth | null {
+  const app = initAdminApp();
+  return app ? getAuth(app) : null;
 }

@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PaymentProcessingOverlay } from "@/components/checkout/payment-processing-overlay";
 import { useCartStore } from "@/store/cart-store";
 import { useOrderStore } from "@/store/order-store";
 import { useAuth } from "@/contexts/auth-context";
@@ -51,9 +52,19 @@ const paymentOptions: {
   },
 ];
 
+function goToPaymentFailed(
+  router: ReturnType<typeof useRouter>,
+  reason: string,
+  paymentId?: string
+) {
+  const params = new URLSearchParams({ reason });
+  if (paymentId) params.set("paymentId", paymentId);
+  router.push(`/checkout/failed?${params.toString()}`);
+}
+
 export function PaymentContent() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, firebaseUser } = useAuth();
   const { settings } = useSettings();
   const storeName = settings.storeName || SITE_NAME;
   const {
@@ -67,8 +78,11 @@ export function PaymentContent() {
     clearCart,
   } = useCartStore();
   const createOrder = useOrderStore((s) => s.createOrder);
+  const registerOrder = useOrderStore((s) => s.registerOrder);
   const [method, setMethod] = useState<PaymentMethod>("upi");
   const [loading, setLoading] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [processingLabel, setProcessingLabel] = useState("Processing your payment…");
   const [reviewOpen, setReviewOpen] = useState(false);
 
   const shipping = getShippingCost();
@@ -91,6 +105,19 @@ export function PaymentContent() {
       </div>
     );
   }
+
+  const customerName = `${checkoutShipping.firstName} ${checkoutShipping.lastName}`;
+
+  const shippingAddressForAdmin = {
+    name: customerName,
+    email: checkoutShipping.email,
+    phone: checkoutShipping.phone,
+    address: checkoutShipping.street,
+    city: checkoutShipping.city,
+    state: checkoutShipping.state,
+    zip: checkoutShipping.postalCode,
+    country: checkoutShipping.country || "India",
+  };
 
   const buildOrderInput = (extras?: {
     razorpayOrderId?: string;
@@ -117,7 +144,7 @@ export function PaymentContent() {
     shippingAddress: {
       id: "addr-checkout",
       label: "Shipping",
-      fullName: `${checkoutShipping.firstName} ${checkoutShipping.lastName}`,
+      fullName: customerName,
       street: checkoutShipping.street,
       city: checkoutShipping.city,
       state: checkoutShipping.state,
@@ -131,13 +158,44 @@ export function PaymentContent() {
     ...extras,
   });
 
+  const buildServerOrderPayload = () => ({
+    userId: user!.id,
+    customerName,
+    customerEmail: checkoutShipping.email,
+    customerPhone: checkoutShipping.phone,
+    items: items.map((item) => ({
+      productId: item.productId,
+      title: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      image: item.image,
+      size: item.size,
+      color: item.color,
+    })),
+    subtotal,
+    shippingCharge: shipping,
+    discount,
+    total,
+    paymentStatus: "paid" as const,
+    paymentMethod: method,
+    couponCode: couponCode || undefined,
+    shippingAddress: shippingAddressForAdmin,
+  });
+
   const processCodOrder = async () => {
-    const order = await createOrder(
-      buildOrderInput({ paymentStatus: "pending" })
-    );
-    clearCart();
-    toast.success("Order placed — pay on delivery!");
-    router.push(`/checkout/success?orderId=${order.id}`);
+    setProcessingLabel("Placing your order…");
+    setProcessing(true);
+    try {
+      const order = await createOrder(
+        buildOrderInput({ paymentStatus: "pending" })
+      );
+      clearCart();
+      toast.success("Order placed — pay on delivery!");
+      router.push(`/checkout/success?orderId=${order.id}`);
+    } finally {
+      setProcessing(false);
+      setLoading(false);
+    }
   };
 
   const processRazorpayPayment = async () => {
@@ -149,7 +207,7 @@ export function PaymentContent() {
         receipt: `order_${Date.now()}`,
         customerEmail: checkoutShipping.email,
         customerPhone: checkoutShipping.phone,
-        customerName: `${checkoutShipping.firstName} ${checkoutShipping.lastName}`,
+        customerName,
         notes: {
           userId: user?.id || "guest",
           paymentMethod: method,
@@ -182,16 +240,25 @@ export function PaymentContent() {
         description: "Order payment",
         order_id: orderId,
         prefill: {
-          name: `${checkoutShipping.firstName} ${checkoutShipping.lastName}`,
+          name: customerName,
           email: checkoutShipping.email,
           contact: checkoutShipping.phone,
         },
         theme: { color: "#00f0ff" },
         handler: async (response) => {
           try {
+            setLoading(false);
+            setReviewOpen(false);
+            setProcessingLabel("Verifying payment and creating your order…");
+            setProcessing(true);
+
+            const idToken = firebaseUser ? await firebaseUser.getIdToken() : "";
+            const headers: Record<string, string> = { "Content-Type": "application/json" };
+            if (idToken) headers.Authorization = `Bearer ${idToken}`;
+
             const verifyRes = await fetch("/api/razorpay/verify", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers,
               body: JSON.stringify({
                 razorpayOrderId: response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
@@ -199,43 +266,89 @@ export function PaymentContent() {
                 amount: total,
                 customerEmail: checkoutShipping.email,
                 customerPhone: checkoutShipping.phone,
-                customerName: `${checkoutShipping.firstName} ${checkoutShipping.lastName}`,
+                customerName,
                 paymentMethod: method,
+                order: user?.id ? buildServerOrderPayload() : undefined,
               }),
             });
 
+            const verifyData = (await verifyRes.json().catch(() => ({}))) as {
+              error?: string;
+              orderId?: string;
+              orderNumber?: string;
+              orderCreatedInAdmin?: boolean;
+            };
+
             if (!verifyRes.ok) {
-              const err = (await verifyRes.json().catch(() => ({}))) as { error?: string };
-              throw new Error(err.error || "Payment verification failed");
+              throw new Error(verifyData.error || "Payment verification failed");
             }
 
-            const order = await createOrder(
-              buildOrderInput({
-                razorpayOrderId: response.razorpay_order_id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                paymentStatus: "paid",
-              })
-            );
+            let orderIdForSuccess: string;
+
+            if (
+              verifyData.orderCreatedInAdmin &&
+              verifyData.orderId &&
+              verifyData.orderNumber
+            ) {
+              const order = registerOrder({
+                ...buildOrderInput({
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  paymentStatus: "paid",
+                }),
+                id: verifyData.orderId,
+                orderNumber: verifyData.orderNumber,
+              });
+              orderIdForSuccess = order.id;
+            } else {
+              const order = await createOrder(
+                buildOrderInput({
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  paymentStatus: "paid",
+                })
+              );
+              orderIdForSuccess = order.id;
+              if (!verifyData.orderCreatedInAdmin) {
+                toast.warning(
+                  "Payment received. If the order is missing in admin, check Firebase service account config.",
+                  { duration: 8000 }
+                );
+              }
+            }
 
             clearCart();
+            setProcessing(false);
             toast.success("Payment successful — full send confirmed!");
-            router.push(`/checkout/success?orderId=${order.id}`);
+            router.push(`/checkout/success?orderId=${orderIdForSuccess}`);
             resolve();
           } catch (error) {
+            setProcessing(false);
+            const message =
+              error instanceof Error ? error.message : "Payment verification failed";
+            goToPaymentFailed(router, message, response.razorpay_payment_id);
             reject(error);
           }
         },
         modal: {
           ondismiss: () => {
             setLoading(false);
+            setProcessing(false);
+            goToPaymentFailed(router, "Payment was cancelled before completion.");
             reject(new Error("Payment cancelled"));
           },
         },
       });
 
-      checkout.on("payment.failed", () => {
-        toast.error("Payment failed. Please try again.");
+      checkout.on("payment.failed", (response: unknown) => {
         setLoading(false);
+        setProcessing(false);
+        const failed = response as { error?: { description?: string; reason?: string } };
+        const reason =
+          failed?.error?.description ||
+          failed?.error?.reason ||
+          "Your bank or UPI app declined the payment.";
+        goToPaymentFailed(router, reason);
         reject(new Error("Payment failed"));
       });
 
@@ -256,19 +369,23 @@ export function PaymentContent() {
       await processRazorpayPayment();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Payment failed";
-      if (message !== "Payment cancelled") {
+      if (message !== "Payment cancelled" && message !== "Payment failed") {
         toast.error(message);
+        goToPaymentFailed(router, message);
       }
       setLoading(false);
+      setProcessing(false);
     }
   };
 
   return (
     <>
+      {processing && <PaymentProcessingOverlay label={processingLabel} />}
+
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-32">
         <h1 className="font-display mb-4 text-3xl font-light tracking-wide">Payment</h1>
         <p className="mb-12 text-sm text-noire-muted">
-          Secure checkout powered by Razorpay Live
+          Secure checkout powered by Razorpay
         </p>
 
         <div className="grid gap-8 lg:grid-cols-[1fr_380px] lg:gap-12">

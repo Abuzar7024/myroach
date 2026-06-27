@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { verifyPaymentSignature } from "@/lib/razorpay/server";
+import { verifyPaymentSignature, getRazorpayClient } from "@/lib/razorpay/server";
 import { isRazorpayConfigured } from "@/lib/razorpay/config";
 import { logRazorpayEvent } from "@/lib/razorpay/events";
+import { getAdminAuth } from "@/lib/firebase/admin";
+import { persistStoreOrder, type PersistStoreOrderInput } from "@/lib/firebase/admin-orders";
 
 export async function POST(request: Request) {
   if (!isRazorpayConfigured()) {
@@ -17,8 +19,8 @@ export async function POST(request: Request) {
       customerEmail?: string;
       customerPhone?: string;
       customerName?: string;
-      storeOrderId?: string;
       paymentMethod?: string;
+      order?: PersistStoreOrderInput;
     };
 
     const razorpayOrderId = String(body.razorpayOrderId || "");
@@ -47,12 +49,54 @@ export async function POST(request: Request) {
         customerEmail: body.customerEmail,
         customerPhone: body.customerPhone,
         customerName: body.customerName,
-        storeOrderId: body.storeOrderId,
         source: "verify",
         message: "Payment signature verification failed",
       });
 
       return NextResponse.json({ error: "Payment verification failed" }, { status: 400 });
+    }
+
+    let paymentStatus = "captured";
+    try {
+      const client = getRazorpayClient();
+      const payment = await client.payments.fetch(razorpayPaymentId);
+      paymentStatus = String(payment.status || "captured");
+      if (payment.status === "failed") {
+        return NextResponse.json({ error: "Payment failed at Razorpay" }, { status: 402 });
+      }
+    } catch (error) {
+      console.warn("[razorpay/verify] Could not fetch payment from Razorpay:", error);
+    }
+
+    const idToken = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
+    let userId: string | undefined;
+    const adminAuth = getAdminAuth();
+    if (idToken && adminAuth) {
+      try {
+        const decoded = await adminAuth.verifyIdToken(idToken);
+        userId = decoded.uid;
+      } catch {
+        return NextResponse.json({ error: "Invalid sign-in session. Sign in again and retry." }, { status: 401 });
+      }
+    }
+
+    let orderId: string | undefined;
+    let orderNumber: string | undefined;
+    let orderCreatedInAdmin = false;
+
+    if (body.order && userId) {
+      const persisted = await persistStoreOrder({
+        ...body.order,
+        userId,
+        razorpayOrderId,
+        razorpayPaymentId,
+        paymentStatus: "paid",
+      });
+      if (persisted) {
+        orderId = persisted.orderId;
+        orderNumber = persisted.orderNumber;
+        orderCreatedInAdmin = true;
+      }
     }
 
     await logRazorpayEvent({
@@ -67,15 +111,19 @@ export async function POST(request: Request) {
       customerEmail: body.customerEmail,
       customerPhone: body.customerPhone,
       customerName: body.customerName,
-      storeOrderId: body.storeOrderId,
+      storeOrderId: orderId,
       source: "verify",
-      message: `Payment captured — ${body.amount ? `₹${Number(body.amount).toFixed(2)}` : "amount pending"}`,
+      message: `Payment ${paymentStatus} — ${body.amount ? `₹${Number(body.amount).toFixed(2)}` : "amount pending"}`,
     });
 
     return NextResponse.json({
       verified: true,
       razorpayOrderId,
       razorpayPaymentId,
+      orderId,
+      orderNumber,
+      orderCreatedInAdmin,
+      paymentStatus,
     });
   } catch (error) {
     console.error("[razorpay/verify]", error);

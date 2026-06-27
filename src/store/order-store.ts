@@ -35,11 +35,17 @@ interface CreateOrderInput {
   paymentStatus?: Order["paymentStatus"];
 }
 
+interface RegisterOrderInput extends CreateOrderInput {
+  id: string;
+  orderNumber: string;
+}
+
 interface OrderStore {
   orders: Order[];
   hydrated: boolean;
   setOrders: (orders: Order[]) => void;
   createOrder: (input: CreateOrderInput) => Promise<Order>;
+  registerOrder: (input: RegisterOrderInput) => Order;
   getOrderById: (id: string) => Order | undefined;
   getOrdersForUser: (userId?: string) => Order[];
   syncFromFirestore: (userId: string) => Promise<void>;
@@ -179,6 +185,38 @@ export const useOrderStore = create<OrderStore>()(
           }
         }
 
+        return order;
+      },
+
+      registerOrder: (input) => {
+        const now = new Date().toISOString();
+        const order: Order = {
+          id: input.id,
+          userId: input.userId,
+          orderNumber: input.orderNumber,
+          items: input.items,
+          subtotal: input.subtotal,
+          shipping: input.shipping,
+          discount: input.discount,
+          total: input.total,
+          couponCode: input.couponCode,
+          status: "pending",
+          shippingAddress: input.shippingAddress,
+          customerEmail: input.customerEmail,
+          customerPhone: input.customerPhone,
+          paymentStatus:
+            input.paymentStatus ??
+            (input.paymentMethod === "cod" ? "pending" : "paid"),
+          paymentMethod: input.paymentMethod,
+          razorpayOrderId: input.razorpayOrderId,
+          razorpayPaymentId: input.razorpayPaymentId,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        const orders = [order, ...get().orders.filter((o) => o.id !== order.id)];
+        saveOrdersToStorage(orders);
+        set({ orders });
         return order;
       },
 
