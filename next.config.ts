@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Keep firebase-admin (and its jwks-rsa → jose ESM chain) external to the
+  // server bundle so Next resolves it at runtime instead of bundling it.
+  serverExternalPackages: ["firebase-admin"],
   images: {
     remotePatterns: [
       {
