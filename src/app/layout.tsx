@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Orbitron, Rajdhani } from "next/font/google";
 import { SiteShell } from "@/components/layout/site-shell";
 import { Providers } from "@/components/providers";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import { SITE_NAME, SITE_DESCRIPTION, SITE_URL } from "@/lib/constants";
 import "./globals.css";
 
@@ -57,6 +59,8 @@ export default function RootLayout({
         <Providers>
           <SiteShell>{children}</SiteShell>
         </Providers>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );

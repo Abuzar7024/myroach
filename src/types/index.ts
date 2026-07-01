@@ -145,7 +145,7 @@ export interface OrderItem {
   color: string;
 }
 
-export type PaymentMethod = "upi" | "card" | "cod";
+export type PaymentMethod = "upi" | "card";
 
 export interface Order {
   id: string;

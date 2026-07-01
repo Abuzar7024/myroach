@@ -25,8 +25,7 @@ export function ShoppingBrandHero({
     <section className="relative -mt-16 w-full overflow-hidden border-b border-accent-cyan/20 bg-noire-black lg:-mt-20">
       <div className="mx-auto grid max-w-7xl lg:grid-cols-[1.1fr_0.9fr] lg:min-h-[min(88vh,720px)]">
         <div className="flex flex-col justify-center px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
-          <span className="sticker sticker-neon w-fit">new season drop</span>
-          <h1 className="font-display mt-5 text-4xl leading-[1.02] tracking-wide text-noire-white sm:text-5xl lg:text-6xl">
+          <h1 className="font-display text-4xl leading-[1.02] tracking-wide text-noire-white sm:text-5xl lg:text-6xl">
             {storeName}
             <span className="mt-2 block text-accent-cyan">Streetwear that hits</span>
           </h1>

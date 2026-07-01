@@ -10,6 +10,7 @@ import { parseEmailActionSearchParams } from "@/lib/auth-email-action";
 import {
   describeReturnPath,
   getAndClearVerificationReturnUrl,
+  loginRedirectPath,
   peekVerificationReturnUrl,
 } from "@/lib/auth-utils";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
@@ -59,11 +60,14 @@ export default function EmailVerificationActionPage() {
   }, [mode, oobCode, completeEmailVerificationLink]);
 
   useEffect(() => {
-    if (state !== "success") return;
+    // Auto-return only when this device is already signed in (same-device
+    // verify). Cross-device verify has no session here, so we keep the success
+    // screen and let the user continue to sign in (audit H7).
+    if (state !== "success" || !firebaseUser) return;
     const target = getAndClearVerificationReturnUrl("/shop");
     const timer = window.setTimeout(() => router.replace(target), 1800);
     return () => window.clearTimeout(timer);
-  }, [state, router]);
+  }, [state, firebaseUser, router]);
 
   const returnLabel = describeReturnPath(returnPath);
 
@@ -146,7 +150,7 @@ export default function EmailVerificationActionPage() {
             </Button>
           ) : (
             <Button asChild className="w-full">
-              <Link href="/login">Sign in</Link>
+              <Link href={loginRedirectPath(returnPath)}>Continue to sign in</Link>
             </Button>
           )}
         </div>

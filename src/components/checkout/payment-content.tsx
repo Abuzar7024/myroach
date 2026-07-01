@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { CreditCard, Smartphone, Banknote } from "lucide-react";
+import { CreditCard, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,12 +43,6 @@ const paymentOptions: {
     label: "Debit / Credit Card",
     description: "Visa, Mastercard, RuPay — powered by Razorpay",
     icon: CreditCard,
-  },
-  {
-    id: "cod",
-    label: "Cash on Delivery",
-    description: "Pay when your drip arrives",
-    icon: Banknote,
   },
 ];
 
@@ -158,60 +152,33 @@ export function PaymentContent() {
     ...extras,
   });
 
-  const buildServerOrderPayload = () => ({
-    userId: user!.id,
-    customerName,
-    customerEmail: checkoutShipping.email,
-    customerPhone: checkoutShipping.phone,
-    items: items.map((item) => ({
+  const processRazorpayPayment = async () => {
+    const idToken = firebaseUser ? await firebaseUser.getIdToken() : "";
+    if (!idToken) {
+      throw new Error("Please sign in again to complete your payment.");
+    }
+
+    // Send only what we want to buy — the server re-prices it authoritatively.
+    const serverItems = items.map((item) => ({
       productId: item.productId,
-      title: item.name,
       quantity: item.quantity,
-      price: item.price,
-      image: item.image,
       size: item.size,
       color: item.color,
-    })),
-    subtotal,
-    shippingCharge: shipping,
-    discount,
-    total,
-    paymentStatus: "paid" as const,
-    paymentMethod: method,
-    couponCode: couponCode || undefined,
-    shippingAddress: shippingAddressForAdmin,
-  });
+    }));
 
-  const processCodOrder = async () => {
-    setProcessingLabel("Placing your order…");
-    setProcessing(true);
-    try {
-      const order = await createOrder(
-        buildOrderInput({ paymentStatus: "pending" })
-      );
-      clearCart();
-      toast.success("Order placed — pay on delivery!");
-      router.push(`/checkout/success?orderId=${order.id}`);
-    } finally {
-      setProcessing(false);
-      setLoading(false);
-    }
-  };
-
-  const processRazorpayPayment = async () => {
     const createRes = await fetch("/api/razorpay/create-order", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
       body: JSON.stringify({
-        amount: total,
-        receipt: `order_${Date.now()}`,
+        items: serverItems,
+        couponCode: couponCode || undefined,
         customerEmail: checkoutShipping.email,
         customerPhone: checkoutShipping.phone,
         customerName,
-        notes: {
-          userId: user?.id || "guest",
-          paymentMethod: method,
-        },
+        notes: { paymentMethod: method },
       }),
     });
 
@@ -252,23 +219,23 @@ export function PaymentContent() {
             setProcessingLabel("Verifying payment and creating your order…");
             setProcessing(true);
 
-            const idToken = firebaseUser ? await firebaseUser.getIdToken() : "";
-            const headers: Record<string, string> = { "Content-Type": "application/json" };
-            if (idToken) headers.Authorization = `Bearer ${idToken}`;
-
             const verifyRes = await fetch("/api/razorpay/verify", {
               method: "POST",
-              headers,
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${idToken}`,
+              },
               body: JSON.stringify({
                 razorpayOrderId: response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
-                amount: total,
+                items: serverItems,
+                couponCode: couponCode || undefined,
+                customerName,
                 customerEmail: checkoutShipping.email,
                 customerPhone: checkoutShipping.phone,
-                customerName,
                 paymentMethod: method,
-                order: user?.id ? buildServerOrderPayload() : undefined,
+                shippingAddress: shippingAddressForAdmin,
               }),
             });
 
@@ -361,11 +328,6 @@ export function PaymentContent() {
     setReviewOpen(false);
 
     try {
-      if (method === "cod") {
-        await processCodOrder();
-        return;
-      }
-
       await processRazorpayPayment();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Payment failed";
@@ -492,11 +454,7 @@ export function PaymentContent() {
             <div className="flex justify-between">
               <span className="text-noire-muted">Payment</span>
               <span className="capitalize">
-                {method === "cod"
-                  ? "Cash on Delivery"
-                  : method === "upi"
-                    ? "UPI (Razorpay)"
-                    : "Card (Razorpay)"}
+                {method === "upi" ? "UPI (Razorpay)" : "Card (Razorpay)"}
               </span>
             </div>
             <div className="flex justify-between pt-2 text-base font-medium">

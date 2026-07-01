@@ -107,9 +107,7 @@ export const useOrderStore = create<OrderStore>()(
           shippingAddress: input.shippingAddress,
           customerEmail: input.customerEmail,
           customerPhone: input.customerPhone,
-          paymentStatus:
-            input.paymentStatus ??
-            (input.paymentMethod === "cod" ? "pending" : "paid"),
+          paymentStatus: input.paymentStatus ?? "paid",
           paymentMethod: input.paymentMethod,
           razorpayOrderId: input.razorpayOrderId,
           razorpayPaymentId: input.razorpayPaymentId,
@@ -204,9 +202,7 @@ export const useOrderStore = create<OrderStore>()(
           shippingAddress: input.shippingAddress,
           customerEmail: input.customerEmail,
           customerPhone: input.customerPhone,
-          paymentStatus:
-            input.paymentStatus ??
-            (input.paymentMethod === "cod" ? "pending" : "paid"),
+          paymentStatus: input.paymentStatus ?? "paid",
           paymentMethod: input.paymentMethod,
           razorpayOrderId: input.razorpayOrderId,
           razorpayPaymentId: input.razorpayPaymentId,

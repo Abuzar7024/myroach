@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# Markdown files
+*.md
+
 # production
 /build
 

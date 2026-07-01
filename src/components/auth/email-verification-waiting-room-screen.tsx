@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/auth-context";
 import {
   describeReturnPath,
   getAndClearVerificationReturnUrl,
+  loginRedirectPath,
   peekVerificationReturnUrl,
   storeVerificationReturnUrl,
 } from "@/lib/auth-utils";
@@ -16,7 +17,7 @@ import {
 } from "@/lib/auth-email-action";
 import { mapFirebaseAuthError } from "@/lib/firebase-auth-errors";
 import { toast } from "sonner";
-import { Clock, Mail, RefreshCw } from "lucide-react";
+import { CheckCircle2, Clock, Mail, RefreshCw } from "lucide-react";
 
 export function EmailVerificationWaitingRoomScreen() {
   const router = useRouter();
@@ -111,13 +112,20 @@ export function EmailVerificationWaitingRoomScreen() {
   }
 
   if (!firebaseUser) {
+    // No session on this device. This is the common cross-device case: the user
+    // opened the verification link on their phone, so their email may already be
+    // confirmed. Guide them to sign in (framed as success, not an error) — audit H7.
     return (
       <div className="mx-auto flex min-h-[80vh] max-w-md flex-col items-center justify-center px-4 py-16 text-center">
         <div className="cyber-card w-full p-10">
-          <h1 className="font-display text-3xl text-accent-cyan">Sign in first</h1>
-          <p className="mt-4 text-sm text-noire-muted">You need an account before email verification.</p>
-          <Button className="mt-8 w-full" onClick={() => router.push("/login")}>
-            Go to login
+          <CheckCircle2 className="mx-auto h-12 w-12 text-accent-cyan" />
+          <h1 className="font-display mt-6 text-2xl text-accent-cyan">Almost there</h1>
+          <p className="mt-4 text-sm leading-relaxed text-noire-muted">
+            If you just clicked the verification link, your email is confirmed. Sign in here to
+            continue to <span className="text-noire-white">{returnLabel}</span>.
+          </p>
+          <Button className="mt-8 w-full" onClick={() => router.push(loginRedirectPath(returnPath))}>
+            Continue to sign in
           </Button>
         </div>
       </div>

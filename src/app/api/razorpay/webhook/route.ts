@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/lib/razorpay/server";
 import { logRazorpayEvent } from "@/lib/razorpay/events";
+import { reconcileOrderPayment } from "@/lib/firebase/admin-orders";
 
 function mapWebhookStatus(event: string): "created" | "authorized" | "captured" | "failed" | "refunded" {
   if (event.includes("failed")) return "failed";
@@ -14,10 +15,14 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const signature = request.headers.get("x-razorpay-signature") || "";
 
-  if (process.env.RAZORPAY_WEBHOOK_SECRET) {
-    if (!verifyWebhookSignature(rawBody, signature)) {
-      return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
-    }
+  // Fail closed (audit H3): without a configured secret we cannot trust the
+  // webhook, so we refuse to process it rather than accept forged events.
+  if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
+    console.error("[razorpay/webhook] RAZORPAY_WEBHOOK_SECRET not set — rejecting webhook");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+  }
+  if (!verifyWebhookSignature(rawBody, signature)) {
+    return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
   }
 
   try {
@@ -38,12 +43,7 @@ export async function POST(request: Request) {
           };
         };
         order?: {
-          entity?: {
-            id?: string;
-            amount?: number;
-            currency?: string;
-            receipt?: string;
-          };
+          entity?: { id?: string; amount?: number; currency?: string; receipt?: string };
         };
       };
     };
@@ -58,12 +58,34 @@ export async function POST(request: Request) {
     }
 
     const amount = entity.amount != null ? entity.amount / 100 : 0;
+    const status = mapWebhookStatus(eventType);
     const eventId = payment?.id ? `webhook_${payment.id}_${eventType}` : `webhook_${order?.id}_${eventType}`;
+
+    // Reconcile the order (idempotent) so a captured-but-unconfirmed payment is
+    // never lost and refunds/failures propagate to the order record.
+    let storeOrderId: string | undefined = payment?.notes?.storeOrderId;
+    if (payment?.id && (status === "captured" || status === "authorized" || status === "refunded" || status === "failed")) {
+      try {
+        const result = await reconcileOrderPayment({
+          razorpayOrderId: payment.order_id,
+          razorpayPaymentId: payment.id,
+          eventStatus: status,
+          amountInr: amount,
+          userId: payment.notes?.userId,
+          customerEmail: payment.email,
+          customerPhone: payment.contact,
+          paymentMethod: payment.method,
+        });
+        if (result?.orderId) storeOrderId = result.orderId;
+      } catch (error) {
+        console.error("[razorpay/webhook] Reconciliation failed:", error);
+      }
+    }
 
     await logRazorpayEvent({
       id: eventId,
       eventType,
-      status: mapWebhookStatus(eventType),
+      status,
       amount,
       currency: entity.currency || "INR",
       razorpayOrderId: payment?.order_id || order?.id,
@@ -71,7 +93,7 @@ export async function POST(request: Request) {
       paymentMethod: payment?.method,
       customerEmail: payment?.email,
       customerPhone: payment?.contact,
-      storeOrderId: payment?.notes?.storeOrderId,
+      storeOrderId,
       source: "webhook",
       message: `Razorpay webhook: ${eventType}`,
       payload: payload as unknown as Record<string, unknown>,

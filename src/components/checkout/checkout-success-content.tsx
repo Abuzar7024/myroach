@@ -132,7 +132,7 @@ export function CheckoutSuccessContent() {
 
         {order.paymentMethod && (
           <p className="mt-4 text-xs text-noire-muted capitalize">
-            Paid via {order.paymentMethod === "cod" ? "Cash on Delivery" : order.paymentMethod.toUpperCase()}
+            Paid via {order.paymentMethod.toUpperCase()}
           </p>
         )}
       </div>
