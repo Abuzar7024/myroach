@@ -68,7 +68,7 @@ export function Header() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const cartItemCount = useCartStore((s) => s.getItemCount());
   const { settings } = useSettings();
   const storeName = settings.storeName || SITE_NAME;
@@ -199,7 +199,12 @@ export function Header() {
 
             {/* Account / Auth — hidden on mobile to avoid crowding (link exists in hamburger drawer) */}
             <div className="hidden sm:block">
-              {user ? (
+              {loading ? (
+                <div
+                  className="h-10 w-24 animate-pulse rounded-md bg-noire-charcoal/60 sm:h-11"
+                  aria-hidden="true"
+                />
+              ) : user ? (
                 <Link
                   href="/account"
                   aria-label="Account"
@@ -347,7 +352,9 @@ export function Header() {
           </div>
 
           <div className="mt-auto shrink-0 border-t border-noire-border/80 pt-5">
-            {user ? (
+            {loading ? (
+              <div className="h-11 w-full animate-pulse rounded-xl bg-noire-charcoal/60" aria-hidden="true" />
+            ) : user ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-3 rounded-xl border border-noire-border bg-noire-black/60 p-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent-cyan/50 bg-noire-charcoal text-sm font-bold text-accent-cyan">

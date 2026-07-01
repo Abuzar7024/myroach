@@ -20,9 +20,22 @@ function initAdminApp(): App | null {
   }
 }
 
+let cachedFirestore: Firestore | null = null;
+
 export function getAdminFirestore(): Firestore | null {
+  if (cachedFirestore) return cachedFirestore;
   const app = initAdminApp();
-  return app ? getFirestore(app) : null;
+  if (!app) return null;
+  const db = getFirestore(app);
+  try {
+    // Optional order/event fields (customerPhone, coupon, storeOrderId, …) can
+    // legitimately be undefined; ignore them instead of throwing on write.
+    db.settings({ ignoreUndefinedProperties: true });
+  } catch {
+    /* settings already applied on this instance */
+  }
+  cachedFirestore = db;
+  return db;
 }
 
 export function getAdminAuth(): Auth | null {

@@ -71,7 +71,13 @@ export function initFirebaseAppCheck(app: FirebaseApp): AppCheck | null {
   appCheckReady = getToken(appCheck, false)
     .then(() => undefined)
     .catch((err: unknown) => {
-      console.warn("[Firebase App Check] token fetch failed:", err);
+      // A 403 here means the reCAPTCHA site key / domain isn't registered in the
+      // Firebase App Check console. It is harmless unless App Check *enforcement*
+      // is enabled (Auth/Firestore keep working). Only surface it in development
+      // to avoid production console noise.
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[Firebase App Check] token fetch failed:", err);
+      }
     });
 
   return appCheck;

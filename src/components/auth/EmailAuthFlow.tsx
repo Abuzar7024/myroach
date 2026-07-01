@@ -2,8 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -106,10 +108,19 @@ export function EmailAuthFlow({ mode = "login", onSuccess }: EmailAuthFlowProps)
         />
       </div>
       <div>
-        <Label htmlFor="password">Password</Label>
-        <Input
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">Password</Label>
+          {mode === "login" && (
+            <Link
+              href="/forgot-password"
+              className="text-xs text-noire-muted transition-colors hover:text-accent-cyan"
+            >
+              Forgot password?
+            </Link>
+          )}
+        </div>
+        <PasswordInput
           id="password"
-          type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"

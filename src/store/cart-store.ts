@@ -33,12 +33,15 @@ function clampQty(item: CartItem, quantity: number) {
 
 interface CartStore {
   items: CartItem[];
+  _syncedUid: string | null;
   couponCode: string | null;
   discount: number;
   shippingId: string;
   shippingOptions: ShippingOption[] | null;
   checkoutShipping: CheckoutShipping | null;
   addItem: (item: CartItem) => void;
+  setItems: (items: CartItem[]) => void;
+  setSyncedUid: (uid: string | null) => void;
   removeItem: (productId: string, size: string, color: string) => void;
   updateQuantity: (productId: string, size: string, color: string, quantity: number) => void;
   setCoupon: (code: string | null, discount: number) => void;
@@ -56,11 +59,15 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      _syncedUid: null,
       couponCode: null,
       discount: 0,
       shippingId: "standard",
       shippingOptions: null,
       checkoutShipping: null,
+
+      setItems: (items) => set({ items }),
+      setSyncedUid: (uid) => set({ _syncedUid: uid }),
 
       addItem: (item) => {
         const qty = clampQty(item, item.quantity);
@@ -155,6 +162,10 @@ export const useCartStore = create<CartStore>()(
     {
       name: "myroach-cart",
       storage: createJSONStorage(() => localStorage),
+      // v1: one-time reset that flushes carts leaked by the previous
+      // (no-clear-on-logout) logic so guests start empty. Signed-in users'
+      // carts are restored from Firestore by CartSync.
+      version: 1,
     }
   )
 );

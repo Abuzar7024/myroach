@@ -50,6 +50,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${orbitron.variable} ${rajdhani.variable} h-full`}
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <body

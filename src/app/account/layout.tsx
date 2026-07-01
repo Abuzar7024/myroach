@@ -75,7 +75,7 @@ export default function AccountLayout({
             <button
               type="button"
               onClick={() => logout()}
-              className="shrink-0 px-4 py-3 text-left text-sm text-noire-muted transition-colors hover:text-accent-pink lg:block lg:w-full"
+              className="shrink-0 rounded-sm border border-accent-pink/50 px-4 py-3 text-left text-sm font-semibold text-accent-pink transition-colors hover:border-accent-pink hover:bg-accent-pink/10 lg:mt-2 lg:block lg:w-full"
             >
               Sign Out
             </button>
