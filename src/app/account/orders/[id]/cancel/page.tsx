@@ -183,7 +183,9 @@ export default function OrderCancellationPage() {
       </Button>
 
       <div>
-        <h1 className="font-display text-3xl text-accent-cyan">Cancel order</h1>
+        <h1 className="font-display text-3xl text-accent-cyan">
+          {resolution === "exchange" ? "Request an exchange" : "Cancel or refund order"}
+        </h1>
         <p className="mt-2 text-sm text-noire-muted">
           {order.orderNumber} · {formatPrice(order.total)}
         </p>
