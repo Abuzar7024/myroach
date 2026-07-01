@@ -1,4 +1,4 @@
-import { subscribeCollection, where, orderBy } from "@/lib/firebase/realtime";
+import { subscribeCollection, where } from "@/lib/firebase/realtime";
 import type { Order, OrderStatus, OrderStatusUpdate } from "@/types";
 
 function toIso(value: unknown, fallback = new Date().toISOString()): string {
@@ -81,11 +81,19 @@ export function subscribeUserOrders(
   onData: (orders: Order[]) => void,
   onError?: (error: Error) => void
 ): () => void {
+  // No orderBy → avoids requiring a (userId + createdAt) composite index that
+  // may not be deployed, which would make this live subscription throw and the
+  // storefront fall back to stale, cached order status. Sort newest-first here.
   return subscribeCollection<Order>(
     "orders",
-    [where("userId", "==", userId), orderBy("createdAt", "desc")],
+    [where("userId", "==", userId)],
     mapOrderFromFirestore,
-    onData,
+    (orders) =>
+      onData(
+        [...orders].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+      ),
     onError
   );
 }
