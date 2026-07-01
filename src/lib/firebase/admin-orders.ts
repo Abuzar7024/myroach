@@ -162,6 +162,25 @@ export async function reconcileOrderPayment(input: {
   // never lost; ignore orphan failed/refund events.
   if (paymentStatus !== "paid") return { orderId: "", action: "noop" };
 
+  // Enrich the fallback order from the customer's profile — the webhook payload
+  // carries no name/address, which otherwise shows blank in the admin panel.
+  let customerName = "";
+  let customerEmail = input.customerEmail ?? null;
+  let customerPhone = input.customerPhone ?? null;
+  if (input.userId) {
+    try {
+      const userSnap = await db.collection("users").doc(input.userId).get();
+      if (userSnap.exists) {
+        const u = (userSnap.data() ?? {}) as Record<string, unknown>;
+        customerName = String(u.name || u.displayName || "");
+        customerEmail = customerEmail || (u.email ? String(u.email) : null);
+        customerPhone = customerPhone || (u.phone ? String(u.phone) : null);
+      }
+    } catch {
+      /* best-effort */
+    }
+  }
+
   const orderId = `ord-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const orderNumber = generateOrderNumber();
   await db
@@ -171,9 +190,9 @@ export async function reconcileOrderPayment(input: {
       id: orderId,
       orderNumber,
       userId: input.userId ?? null,
-      customerName: "",
-      customerEmail: input.customerEmail ?? null,
-      customerPhone: input.customerPhone ?? null,
+      customerName,
+      customerEmail,
+      customerPhone,
       items: [],
       subtotal: input.amountInr,
       tax: 0,
