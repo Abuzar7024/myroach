@@ -17,15 +17,32 @@
 /.next/
 /out/
 
-# Markdown files
-*.md
+# AI-generated / report docs only — keep README.md, AGENTS.md, CLAUDE.md, FIREBASE_SETUP.md tracked
+/AUDIT_AND_REQUIREMENTS.md
+/USER_FLOWS.md
+/SECURITY_REPORT.md
+/UX_REVIEW.md
+/RESPONSIVE_REVIEW.md
+/PERFORMANCE_ROADMAP.md
+/TEST_CASES.md
 
 # production
 /build
+/dist
 
-# misc
+# local files & logs
+*.local
+*.log
+
+# misc / secrets & credentials
 .DS_Store
 *.pem
+*.key
+*.p12
+*.pfx
+firebase-service-account*.json
+service-account*.json
+*-adminsdk-*.json
 
 # debug
 npm-debug.log*
