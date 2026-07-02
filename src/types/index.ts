@@ -95,6 +95,7 @@ export interface CartItem {
   colorHex: string;
   minOrderQty?: number;
   maxOrderQty?: number;
+  printSide?: "front" | "back";
 }
 
 export interface Cart {
@@ -143,6 +144,7 @@ export interface OrderItem {
   quantity: number;
   size: string;
   color: string;
+  printSide?: "front" | "back";
 }
 
 export type PaymentMethod = "upi" | "card";

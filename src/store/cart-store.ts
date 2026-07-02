@@ -44,6 +44,7 @@ interface CartStore {
   setSyncedUid: (uid: string | null) => void;
   removeItem: (productId: string, size: string, color: string) => void;
   updateQuantity: (productId: string, size: string, color: string, quantity: number) => void;
+  changeSize: (productId: string, oldSize: string, color: string, newSize: string) => void;
   setCoupon: (code: string | null, discount: number) => void;
   setShippingId: (id: string) => void;
   setShippingOptions: (options: ShippingOption[] | null) => void;
@@ -114,6 +115,30 @@ export const useCartStore = create<CartStore>()(
               : i
           ),
         }));
+      },
+
+      changeSize: (productId, oldSize, color, newSize) => {
+        if (oldSize === newSize) return;
+        set((state) => {
+          const item = state.items.find(
+            (i) => i.productId === productId && i.size === oldSize && i.color === color
+          );
+          if (!item) return {};
+          const rest = state.items.filter(
+            (i) => !(i.productId === productId && i.size === oldSize && i.color === color)
+          );
+          const existing = rest.find(
+            (i) => i.productId === productId && i.size === newSize && i.color === color
+          );
+          if (existing) {
+            return {
+              items: rest.map((i) =>
+                i === existing ? { ...i, quantity: clampQty(i, i.quantity + item.quantity) } : i
+              ),
+            };
+          }
+          return { items: [...rest, { ...item, size: newSize }] };
+        });
       },
 
       setCoupon: (code, discount) => set({ couponCode: code, discount }),

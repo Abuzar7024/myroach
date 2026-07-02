@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, ShoppingBag, Eye } from "lucide-react";
@@ -40,6 +41,7 @@ export function ProductCard({ product, onQuickView, priority }: ProductCardProps
   const toggleWishlist = useWishlistStore((s) => s.toggleItem);
   const isInWishlist = useWishlistStore((s) => s.isInWishlist(product.id));
   const addItem = useCartStore((s) => s.addItem);
+  const router = useRouter();
   const [cartDialogOpen, setCartDialogOpen] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -72,6 +74,17 @@ export function ProductCard({ product, onQuickView, priority }: ProductCardProps
       return;
     }
     const variant = product.variants[0];
+    const sizes = variant?.sizes ?? [];
+    // Don't silently add a default size — make the customer choose one first.
+    if (sizes.length > 1) {
+      if (onQuickView) {
+        onQuickView(product);
+      } else {
+        toast.message("Pick your size", { description: "Choose a size on the product page." });
+        router.push(productHref);
+      }
+      return;
+    }
     addItem({
       productId: product.id,
       slug: product.slug,
@@ -79,7 +92,7 @@ export function ProductCard({ product, onQuickView, priority }: ProductCardProps
       image: imageSrc,
       price: product.price,
       quantity: 1,
-      size: variant?.sizes[0] ?? "M",
+      size: sizes[0] ?? "One Size",
       color: variant?.color ?? "Default",
       colorHex: variant?.colorHex ?? "#1a1a1a",
     });

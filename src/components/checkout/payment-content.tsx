@@ -129,6 +129,7 @@ export function PaymentContent() {
       quantity: item.quantity,
       size: item.size,
       color: item.color,
+      printSide: item.printSide,
     })),
     subtotal,
     shipping,
@@ -164,6 +165,7 @@ export function PaymentContent() {
       quantity: item.quantity,
       size: item.size,
       color: item.color,
+      printSide: item.printSide,
     }));
 
     const createRes = await fetch("/api/razorpay/create-order", {

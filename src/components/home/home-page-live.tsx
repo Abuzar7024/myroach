@@ -7,8 +7,6 @@ import { FeaturedCollections } from "@/components/home/hero-section";
 import { FeaturedProducts } from "@/components/home/featured-products";
 import {
   ProductSection,
-  PromoBanner,
-  BrandStory,
   ShopTeaserSection,
   Newsletter,
 } from "@/components/home/sections";
@@ -69,7 +67,6 @@ export function HomePageLive() {
     [products]
   );
 
-  const hasPromoCopy = Boolean(homepage.promoTitle?.trim() || homepage.promoSubtitle?.trim());
 
   const hasBanners = banners.some((b) => b.image);
   const showProductHero = !bannersLoading && !hasBanners && products.length > 0;
@@ -143,14 +140,6 @@ export function HomePageLive() {
         />
       )}
 
-      {homepage.showPromo === true && hasPromoCopy && (
-        <PromoBanner
-          title={homepage.promoTitle}
-          subtitle={homepage.promoSubtitle}
-          freeShippingThreshold={settings.freeShippingThreshold}
-        />
-      )}
-
       {homepage.showBestSellers === true && bestSellers.length > 0 && (
         <ProductSection
           title="CERTIFIED HEAT"
@@ -162,7 +151,6 @@ export function HomePageLive() {
       )}
 
       {homepage.showShopTeaser === true && <ShopTeaserSection />}
-      {homepage.showBrandStory === true && <BrandStory />}
       {homepage.showNewsletter === true && <Newsletter />}
     </>
   );

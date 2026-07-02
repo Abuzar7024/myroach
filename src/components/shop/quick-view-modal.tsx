@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart-store";
 import { AddToCartDialog } from "@/components/shop/add-to-cart-dialog";
+import { toast } from "sonner";
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -28,6 +29,10 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
   const sizes = variant?.sizes || [];
 
   const handleAddToCart = () => {
+    if (sizes.length > 1 && !selectedSize) {
+      toast.error("Pick a size first");
+      return;
+    }
     const color = selectedColor || product.variants[0].color;
     const size = selectedSize || product.variants[0].sizes[0];
     const colorVariant = product.variants.find((v) => v.color === color)!;

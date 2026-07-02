@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useCartStore } from "@/store/cart-store";
+import { useProducts } from "@/hooks/use-products";
 import { useAuth } from "@/contexts/auth-context";
 import { formatPrice } from "@/lib/format";
 import { loginRedirectPath, storeReturnUrl } from "@/lib/auth-utils";
@@ -33,11 +34,6 @@ type PendingRemove = {
   name: string;
 };
 
-function variantLabel(size: string, color: string) {
-  if (color && color !== "Default") return `${color} · Size ${size}`;
-  return `Size ${size}`;
-}
-
 export function CartContent() {
   const { settings } = useSettings();
   const freeShippingThreshold = settings.freeShippingThreshold;
@@ -47,6 +43,7 @@ export function CartContent() {
   const {
     items,
     updateQuantity,
+    changeSize,
     removeItem,
     getSubtotal,
     getTotal,
@@ -55,6 +52,13 @@ export function CartContent() {
     couponCode,
     discount,
   } = useCartStore();
+  const { products } = useProducts();
+  const sizesForItem = (productId: string, color: string) => {
+    const p = products.find((prod) => prod.id === productId);
+    if (!p) return [] as string[];
+    const v = p.variants.find((variant) => variant.color === color) ?? p.variants[0];
+    return v?.sizes ?? [];
+  };
   const { coupons } = useCoupons();
   const [couponInput, setCouponInput] = useState("");
   const [removeTarget, setRemoveTarget] = useState<PendingRemove | null>(null);
@@ -121,6 +125,7 @@ export function CartContent() {
             const lineTotal = item.price * item.quantity;
             const atMin = item.quantity <= (item.minOrderQty ?? 1);
             const atMax = item.quantity >= (item.maxOrderQty ?? 99);
+            const sizes = sizesForItem(item.productId, item.color);
             return (
               <article
                 key={`${item.productId}-${item.size}-${item.color}`}
@@ -138,7 +143,29 @@ export function CartContent() {
                       <Link href={`/product/${item.slug}`} className="block truncate font-medium hover:text-accent-cyan">
                         {item.name}
                       </Link>
-                      <p className="mt-0.5 text-xs text-noire-muted">{variantLabel(item.size, item.color)}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        {item.color && item.color !== "Default" && (
+                          <span className="text-xs text-noire-muted">{item.color}</span>
+                        )}
+                        {sizes.length > 1 ? (
+                          <select
+                            value={item.size}
+                            onChange={(e) =>
+                              changeSize(item.productId, item.size, item.color, e.target.value)
+                            }
+                            aria-label="Size"
+                            className="rounded border border-noire-border bg-noire-charcoal px-2 py-1 text-xs text-zinc-100 focus:border-accent-cyan focus:outline-none"
+                          >
+                            {sizes.map((s) => (
+                              <option key={s} value={s}>
+                                Size {s}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-xs text-noire-muted">Size {item.size}</span>
+                        )}
+                      </div>
                       <p className="mt-1 text-sm text-accent-cyan">{formatPrice(item.price)} each</p>
                     </div>
                     <p className="shrink-0 text-sm font-medium">{formatPrice(lineTotal)}</p>

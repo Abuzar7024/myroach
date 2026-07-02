@@ -34,6 +34,7 @@ export interface ServerOrderItemInput {
   quantity: number;
   size?: string;
   color?: string;
+  printSide?: "front" | "back";
 }
 
 export interface PricedItem {
@@ -44,6 +45,7 @@ export interface PricedItem {
   image?: string;
   size?: string;
   color?: string;
+  printSide?: "front" | "back";
 }
 
 export interface ServerPricing {
@@ -166,6 +168,7 @@ export async function computeServerPricing(input: {
       image: firstImage(raw),
       size: line.size,
       color: line.color,
+      printSide: line.printSide,
     });
   }
 

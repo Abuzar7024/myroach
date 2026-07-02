@@ -15,6 +15,7 @@ export interface PersistStoreOrderInput {
     image?: string;
     size?: string;
     color?: string;
+    printSide?: "front" | "back";
   }[];
   subtotal: number;
   shippingCharge: number;

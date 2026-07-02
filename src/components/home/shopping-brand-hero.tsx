@@ -13,19 +13,24 @@ interface ShoppingBrandHeroProps {
   freeShippingThreshold?: number;
 }
 
+const HERO_IMAGE =
+  "https://images.unsplash.com/photo-1523398002811-999ca8dec234?w=1200&q=75&auto=format&fit=crop";
+
 export function ShoppingBrandHero({
   products,
   storeName = "MY ROACH",
   freeShippingThreshold,
 }: ShoppingBrandHeroProps) {
-  const showcase = products.filter((p) => p.images[0]).slice(0, 4);
-  const lead = showcase[0];
+  const lead = products.find((p) => p.images[0]);
 
   return (
     <section className="relative -mt-16 w-full overflow-hidden border-b border-accent-cyan/20 bg-noire-black lg:-mt-20">
-      <div className="mx-auto grid max-w-7xl lg:grid-cols-[1.1fr_0.9fr] lg:min-h-[min(88vh,720px)]">
+      <div className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-accent-cyan/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-32 bottom-0 h-96 w-96 rounded-full bg-accent-pink/10 blur-3xl" />
+      <div className="relative mx-auto grid max-w-7xl items-center gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:min-h-[min(88vh,760px)]">
         <div className="flex flex-col justify-center px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
-          <h1 className="font-display text-4xl leading-[1.02] tracking-wide text-noire-white sm:text-5xl lg:text-6xl">
+          <span className="sticker sticker-neon w-fit">new drop · 2026</span>
+          <h1 className="font-display mt-5 text-4xl leading-[1.02] tracking-wide text-noire-white sm:text-5xl lg:text-6xl xl:text-7xl">
             {storeName}
             <span className="mt-2 block text-accent-cyan">Streetwear that hits</span>
           </h1>
@@ -36,13 +41,13 @@ export function ShoppingBrandHero({
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild variant="drip" size="lg">
               <Link href="/shop">
-                Shop all fits
+                Shop the collection
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             {lead && (
               <Button asChild variant="cyber" size="lg">
-                <Link href={`/product/${lead.slug}`}>Featured fit</Link>
+                <Link href={`/product/${lead.slug}`}>Explore new arrivals</Link>
               </Button>
             )}
           </div>
@@ -53,30 +58,23 @@ export function ShoppingBrandHero({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 p-4 sm:gap-3 sm:p-6 lg:p-8">
-          {showcase.map((product, index) => (
-            <Link
-              key={product.id}
-              href={`/product/${product.slug}`}
-              className={`group relative overflow-hidden border border-noire-border bg-noire-charcoal neon-border-hover ${
-                index === 0 ? "col-span-2 aspect-[16/10]" : "aspect-[4/5]"
-              }`}
-            >
-              <Image
-                src={product.images[0]}
-                alt={product.name}
-                fill
-                className="object-cover transition-transform duration-700 group-hover:scale-105"
-                sizes={index === 0 ? "(max-width: 1024px) 100vw, 50vw" : "(max-width: 1024px) 50vw, 25vw"}
-                priority={index < 2}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-noire-black/85 via-noire-black/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <p className="truncate text-sm font-medium text-noire-white">{product.name}</p>
-                <p className="text-xs text-accent-cyan">{formatPrice(product.price)}</p>
-              </div>
-            </Link>
-          ))}
+        <div className="px-4 pb-12 sm:px-6 lg:px-8 lg:pb-0">
+          <div className="group relative aspect-[4/5] w-full overflow-hidden rounded-2xl border border-accent-cyan/30 shadow-[0_0_40px_rgba(0,240,255,0.15)] sm:aspect-[5/6] lg:aspect-[4/5]">
+            <Image
+              src={HERO_IMAGE}
+              alt={`${storeName} streetwear`}
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-noire-black/85 via-noire-black/10 to-transparent" />
+            <span className="sticker sticker-neon absolute left-4 top-4">best sellers</span>
+            <div className="absolute bottom-0 left-0 right-0 p-5">
+              <p className="font-display text-lg text-noire-white">The Rotation</p>
+              <p className="text-xs text-accent-cyan">Limited streetwear collection</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
