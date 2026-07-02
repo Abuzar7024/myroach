@@ -47,7 +47,6 @@ export function CartContent() {
     removeItem,
     getSubtotal,
     getTotal,
-    getShippingCost,
     setCoupon,
     couponCode,
     discount,
@@ -65,9 +64,14 @@ export function CartContent() {
   const [couponSuccessOpen, setCouponSuccessOpen] = useState(false);
   const [couponSuccessMsg, setCouponSuccessMsg] = useState("");
 
-  const shipping = getShippingCost();
   const subtotal = getSubtotal();
-  const total = getTotal();
+  // Free shipping applies only once the order reaches the admin-set threshold.
+  // Below it, the configured shipping charge is shown. Derived from live
+  // settings so the cart never lags behind what the admin panel saved.
+  const qualifiesForFreeShipping =
+    freeShippingThreshold != null && freeShippingThreshold > 0 && subtotal >= freeShippingThreshold;
+  const shipping = qualifiesForFreeShipping ? 0 : settings.shippingCharge ?? 0;
+  const total = getTotal(shipping);
 
   const applyCoupon = () => {
     if (coupons.length === 0) {
